@@ -1,5 +1,5 @@
-CFLAGS = -O2 -Wall -Wextra -Wdeclaration-after-statement
-CPPFLAGS = -O2 -Wall -Wextra
+CFLAGS ?= -O2 -Wall -Wextra -Wdeclaration-after-statement
+CPPFLAGS ?= -O2 -Wall -Wextra
 
 WORDS = words-10k-pass.txt words-english.txt words-female.txt words-male.txt words-surname.txt
 
