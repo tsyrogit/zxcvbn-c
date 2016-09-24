@@ -212,7 +212,7 @@ static inline void MyOpenFile(FileHandle & f, const char *Name)
 }
 static inline bool MyReadFile(FileHandle & f, void *Buf, unsigned int Num)
 {
-    return f.read((char *)Buf, Num);
+    return (bool)f.read((char *)Buf, Num);
 }
 static inline void MyCloseFile(FileHandle & f)
 {
