@@ -56,5 +56,6 @@ test: test-file test-inline test-c++inline test-c++file testcases.txt
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
 	rm -f test-inline zxcvbn-inline.o test-c++inline zxcvbn-c++inline.o
+	rm -f dict-*.h zxcvbn.dict zxcvbn.cpp test.cpp
 	rm -f dictgen
 	
