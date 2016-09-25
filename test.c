@@ -34,7 +34,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "zxcvbn.h"
+#include <zxcvbn.h>
 
 /* For pre-compiled headers under windows */
 #ifdef _WIN32
