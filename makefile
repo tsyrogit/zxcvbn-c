@@ -11,7 +11,7 @@ SONAME = libzxcvbn.so.0
 
 WORDS = words-10k-pass.txt words-english.txt words-female.txt words-male.txt words-surname.txt
 
-all: test-file test-inline test-c++inline test-c++file test-shlib
+all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib
 
 test-shlib: test.c $(TARGET_LIB)
 	if [ ! -e libzxcvbn.so ]; then ln -s $(TARGET_LIB) libzxcvbn.so; fi
@@ -20,6 +20,12 @@ test-shlib: test.c $(TARGET_LIB)
 $(TARGET_LIB): zxcvbn-inline-pic.o
 	gcc $(CFLAGS) $(LDFLAGS) -fPIC -shared -Wl,-soname,$(SONAME) -o $@ $^ -lm
 	if [ ! -e $(SONAME) ]; then ln -s $(TARGET_LIB) $(SONAME); fi
+
+test-statlib: test.c libzxcvbn.a
+	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^ -lm
+
+libzxcvbn.a: zxcvbn-inline.o
+	ar cvq $@ $^
 
 test-file: test.c zxcvbn-file.o
 	gcc $(CFLAGS) -DUSE_DICT_FILE -o test-file test.c zxcvbn-file.o -lm
@@ -61,13 +67,15 @@ zxcvbn-c++file.o: zxcvbn.c dict-crc.h zxcvbn.h
 	if [ ! -e zxcvbn.cpp ]; then ln -s zxcvbn.c zxcvbn.cpp; fi
 	g++ $(CPPFLAGS) -DUSE_DICT_FILE -c -o zxcvbn-c++file.o zxcvbn.cpp
 
-test: test-file test-inline test-c++inline test-c++file test-shlib testcases.txt
+test: test-file test-inline test-c++inline test-c++file test-shlib test-statlib testcases.txt
 	@echo Testing C build, dictionary from file
 	./test-file -t testcases.txt
 	@echo Testing C build, dictionary in executable
 	./test-inline -t testcases.txt
 	@echo Testing C shlib, dictionary in shlib
 	LD_LIBRARY_PATH=. ./test-shlib -t testcases.txt
+	@echo Testing C static lib, dictionary in lib
+	./test-statlib -t testcases.txt
 	@echo Testing C++ build, dictionary from file
 	./test-c++file -t testcases.txt
 	@echo Testing C++ build, dictionary in executable
@@ -78,4 +86,4 @@ clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
 	rm -f test-inline zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
 	rm -f dictgen
-	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib
+	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib libzxcvbn.a test-statlib
