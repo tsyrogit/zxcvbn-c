@@ -1,9 +1,25 @@
 CFLAGS = -O2 -Wall -Wextra -Wdeclaration-after-statement
 CPPFLAGS = -O2 -Wall -Wextra
 
+# need zxcvbn.h prior to package installation
+CFLAGS += -I.
+CPPFLAGS += -I.
+
+# library metadata
+TARGET_LIB = libzxcvbn.so.0.0.0
+SONAME = libzxcvbn.so.0
+
 WORDS = words-10k-pass.txt words-english.txt words-female.txt words-male.txt words-surname.txt
 
-all: test-file test-inline test-c++inline test-c++file
+all: test-file test-inline test-c++inline test-c++file test-shlib
+
+test-shlib: test.c $(TARGET_LIB)
+	if [ ! -e libzxcvbn.so ]; then ln -s $(TARGET_LIB) libzxcvbn.so; fi
+	gcc $(CFLAGS) -o $@ $< -L. -lzxcvbn -lm
+
+$(TARGET_LIB): zxcvbn-inline-pic.o
+	gcc $(CFLAGS) $(LDFLAGS) -fPIC -shared -Wl,-soname,$(SONAME) -o $@ $^ -lm
+	if [ ! -e $(SONAME) ]; then ln -s $(TARGET_LIB) $(SONAME); fi
 
 test-file: test.c zxcvbn-file.o
 	gcc $(CFLAGS) -DUSE_DICT_FILE -o test-file test.c zxcvbn-file.o -lm
@@ -13,6 +29,9 @@ zxcvbn-file.o: zxcvbn.c dict-crc.h zxcvbn.h
 
 test-inline: test.c zxcvbn-inline.o
 	gcc $(CFLAGS) -o test-inline test.c zxcvbn-inline.o -lm
+
+zxcvbn-inline-pic.o: zxcvbn.c dict-src.h zxcvbn.h
+	gcc $(CFLAGS) -fPIC -c -o $@ $<
 
 zxcvbn-inline.o: zxcvbn.c dict-src.h zxcvbn.h
 	gcc $(CFLAGS) -c -o zxcvbn-inline.o zxcvbn.c
@@ -42,11 +61,13 @@ zxcvbn-c++file.o: zxcvbn.c dict-crc.h zxcvbn.h
 	if [ ! -e zxcvbn.cpp ]; then ln -s zxcvbn.c zxcvbn.cpp; fi
 	g++ $(CPPFLAGS) -DUSE_DICT_FILE -c -o zxcvbn-c++file.o zxcvbn.cpp
 
-test: test-file test-inline test-c++inline test-c++file testcases.txt
+test: test-file test-inline test-c++inline test-c++file test-shlib testcases.txt
 	@echo Testing C build, dictionary from file
 	./test-file -t testcases.txt
 	@echo Testing C build, dictionary in executable
 	./test-inline -t testcases.txt
+	@echo Testing C shlib, dictionary in shlib
+	LD_LIBRARY_PATH=. ./test-shlib -t testcases.txt
 	@echo Testing C++ build, dictionary from file
 	./test-c++file -t testcases.txt
 	@echo Testing C++ build, dictionary in executable
@@ -55,6 +76,6 @@ test: test-file test-inline test-c++inline test-c++file testcases.txt
 
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
-	rm -f test-inline zxcvbn-inline.o test-c++inline zxcvbn-c++inline.o
+	rm -f test-inline zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
 	rm -f dictgen
-	
+	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib
