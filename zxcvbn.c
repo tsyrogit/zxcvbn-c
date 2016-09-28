@@ -1346,7 +1346,7 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
  *********************************************************************************/
 
 #define MIN_SEQUENCE_LEN 3
-
+#define MAX_SEQUENCE_STEP 5
 /**********************************************************************************
  * Try to match password part as a set of incrementing or decrementing characters.
  * Parameters:
@@ -1359,12 +1359,13 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
 {
     int Len=0;
     int SetLow, SetHigh, Dir;
-    uint8_t First, Next;
+    uint8_t First, Next, IsDigits;
 
     Passwd += Start;
     First = Passwd[0];
     Dir = Passwd[1] - First;
     Len = 0;
+    IsDigits = 0;
     /* Decide on min and max character code for sequence */
     if (islower(*Passwd))
     {
@@ -1380,30 +1381,36 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
     {
         SetLow = '0';
         SetHigh = '9';
-        if ((First == '0') && (Dir == 9))
+        if ((First == '0') && isdigit(Passwd[1]) && (Dir > MAX_SEQUENCE_STEP))
         {
-            /* Special case for decrementing sequence of digits, allow starting with 098 */
-            Dir = -1;
-            ++Len;
-            ++Passwd;
+            /* Special case for decrementing sequence of digits, treat '0 as a 'ten' character */
+            Dir = Passwd[1] - ('9' + 1);
         }
+        IsDigits = 1;
     }
     else
         return;
 
-    if ((Dir == 1) || (Dir == -1))
+    /* Only consider it a sequence if the character increment is not too large */
+    if (Dir && (Dir <= MAX_SEQUENCE_STEP) && (Dir >= -MAX_SEQUENCE_STEP))
     {
         ++Len;
         while(1)
         {
-            if ((Passwd[0] == '9') && (Passwd[1] == '0') && (Dir > 0))
+            Next = Passwd[0] + Dir;
+            if (IsDigits && (Dir > 0) && (Next == ('9' + 1)) && (Passwd[1] == '0'))
             {
+                /* Incrementing digits, consider '0' to be same as a 'ten' character */ 
                 ++Len;
                 ++Passwd;
                 break;
             }
-            Next = Passwd[0] + Dir;
-            if ((Next > SetHigh) || (Next < SetLow) || (Passwd[1] != Next))
+            if (IsDigits && (Dir < 0) && (Passwd[0] == '0') && (Passwd[1] == ('9'+1 + Dir)))
+            {
+                ++Len;
+                ++Passwd;
+            }
+            else if ((Next > SetHigh) || (Next < SetLow) || (Passwd[1] != Next))
                 break;
             ++Len;
             ++Passwd;
@@ -1418,7 +1425,7 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
         double e;
         if ((First == 'a') || (First == '1'))
             e = log(2.0);
-        else if (isdigit(First))
+        else if (IsDigits)
             e = log(10.0);
         else if (isupper(First))
             e = log(26*2.0);

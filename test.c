@@ -60,9 +60,9 @@ static void CalcPass(const char *Pwd, int Quiet)
         gettimeofday(&t1, 0);
         e = ZxcvbnMatch(Pwd, UsrDict, &Info);
         gettimeofday(&t2, 0);
-        
+
         Len = strlen(Pwd);
-        printf("Pass %s \tLength %d\tEntropy %.3f\n", Pwd, Len, e);
+        printf("Pass %s \tLength %d\tEntropy bits=%.3f  log10=%.3f\n", Pwd, Len, e, e * 0.301029996);
         p = Info;
         ChkLen = 0;
         while(p)
