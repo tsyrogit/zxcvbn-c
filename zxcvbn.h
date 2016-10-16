@@ -69,7 +69,8 @@ typedef enum
     SEQUENCE_MATCH,     /* 7 */
     SPATIAL_MATCH,      /* 8 */
     DATE_MATCH,         /* 9 */
-    YEAR_MATCH          /* 10 */
+    YEAR_MATCH,         /* 10 */
+    MULTIPLE_MATCH = 32 /* Added to above to indicate matching part has been repeated */
 } ZxcTypeMatch_t;
 
 /* Linked list of information returned in the Info arg to ZxcvbnMatch */

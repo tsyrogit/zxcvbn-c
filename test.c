@@ -27,7 +27,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * 
+ *
  **********************************************************************************/
 
 #include <stdio.h>
@@ -68,21 +68,31 @@ static void CalcPass(const char *Pwd, int Quiet)
         while(p)
         {
             int n;
-            switch(p->Type)
+            switch((int)p->Type)
             {
-                case BRUTE_MATCH:       printf("  Type: Bruteforce");   break;
-                case DICTIONARY_MATCH:  printf("  Type: Dictionary");   break;
-                case DICT_LEET_MATCH:   printf("  Type: Dict+Leet ");   break;
-                case USER_MATCH:        printf("  Type: User Words");   break;
-                case USER_LEET_MATCH:   printf("  Type: User+Leet ");   break;
-                case REPEATS_MATCH:     printf("  Type: Repeated  ");   break;
-                case SEQUENCE_MATCH:    printf("  Type: Sequence  ");   break;
-                case SPATIAL_MATCH:     printf("  Type: Spatial   ");   break;
-                case DATE_MATCH:        printf("  Type: Date      ");   break;
+                case BRUTE_MATCH:                     printf("  Type: Bruteforce     ");   break;
+                case DICTIONARY_MATCH:                printf("  Type: Dictionary     ");   break;
+                case DICT_LEET_MATCH:                 printf("  Type: Dict+Leet      ");   break;
+                case USER_MATCH:                      printf("  Type: User Words     ");   break;
+                case USER_LEET_MATCH:                 printf("  Type: User+Leet      ");   break;
+                case REPEATS_MATCH:                   printf("  Type: Repeated       ");   break;
+                case SEQUENCE_MATCH:                  printf("  Type: Sequence       ");   break;
+                case SPATIAL_MATCH:                   printf("  Type: Spatial        ");   break;
+                case DATE_MATCH:                      printf("  Type: Date           ");   break;
+                case BRUTE_MATCH+MULTIPLE_MATCH:      printf("  Type: Bruteforce(Rep)");   break;
+                case DICTIONARY_MATCH+MULTIPLE_MATCH: printf("  Type: Dictionary(Rep)");   break;
+                case DICT_LEET_MATCH+MULTIPLE_MATCH:  printf("  Type: Dict+Leet(Rep) ");   break;
+                case USER_MATCH+MULTIPLE_MATCH:       printf("  Type: User Words(Rep)");   break;
+                case USER_LEET_MATCH+MULTIPLE_MATCH:  printf("  Type: User+Leet(Rep) ");   break;
+                case REPEATS_MATCH+MULTIPLE_MATCH:    printf("  Type: Repeated(Rep)  ");   break;
+                case SEQUENCE_MATCH+MULTIPLE_MATCH:   printf("  Type: Sequence(Rep)  ");   break;
+                case SPATIAL_MATCH+MULTIPLE_MATCH:    printf("  Type: Spatial(Rep)   ");   break;
+                case DATE_MATCH+MULTIPLE_MATCH:       printf("  Type: Date(Rep)      ");   break;
+
                 default:                printf("  Type: Unknown%d ", p->Type);   break;
             }
             ChkLen += p->Length;
-            printf("  Length %d  Entropy %6.3f  ", p->Length, p->Entrpy);
+            printf("  Length %d  Entropy %6.3f (%.2f) ", p->Length, p->Entrpy, p->Entrpy * 0.301029996);
             for(n = 0; n < p->Length; ++n, ++Pwd)
                 printf("%c", *Pwd);
             printf("\n");
@@ -137,7 +147,7 @@ int DoChecks(char *file)
         /* Skip leading whitespace */
         while(*Pwd && (*Pwd <= ' '))
             ++Pwd;
-        
+
         /* Make password null termnated */
         s = Pwd;
         t = strchr(s, '\t');
@@ -150,7 +160,7 @@ int DoChecks(char *file)
             break;
         }
         *t++ = 0;
-        
+
         /* Skip whitespace before entropy value */
         while(*t && (*t <= ' '))
             ++t;
@@ -160,7 +170,7 @@ int DoChecks(char *file)
             r = 1;
             break;
         }
-        
+
         Ent = atof(t);
         if ((Ent < 0.0) || (Ent > 1000.0))
         {
@@ -212,7 +222,7 @@ int main(int argc, char **argv)
                     "          -q option stops password analysis details from being output.\n"
                     "       %s -t file\n"
                     "          Read the file and check for correct results.\n", s, s);
-                    
+
             return 1;
         }
     }

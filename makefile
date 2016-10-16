@@ -9,7 +9,7 @@ CPPFLAGS += -I.
 TARGET_LIB = libzxcvbn.so.0.0.0
 SONAME = libzxcvbn.so.0
 
-WORDS = words-10k-pass.txt words-english.txt words-female.txt words-male.txt words-surname.txt
+WORDS = words-eng_wiki.txt words-english.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
 
 all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib
 
@@ -49,7 +49,7 @@ dict-crc.h: dictgen $(WORDS)
 	./dictgen -b -o zxcvbn.dict -h dict-crc.h $(WORDS)
 
 dictgen: dict-generate.cpp makefile
-	g++ -std=c++11 $(CPPFLAGS) -o dictgen dict-generate.cpp
+	g++ -std=c++11 -O2 $(CPPFLAGS) -o dictgen dict-generate.cpp
 
 test-c++inline: test.c zxcvbn-c++inline.o
 	if [ ! -e test.cpp ]; then ln -s test.c test.cpp; fi
@@ -84,7 +84,7 @@ test: test-file test-inline test-c++inline test-c++file test-shlib test-statlib 
 
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
-	rm -f test-inline zxcvbn-inline.o test-c++inline zxcvbn-c++inline.o
+	rm -f test-inline zxcvbn-inline.o test-c++inline zxcvbn-c++inline.o zxcvbn-inline-pic.o
 	rm -f dict-*.h zxcvbn.dict zxcvbn.cpp test.cpp
 	rm -f dictgen
 	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib libzxcvbn.a test-statlib

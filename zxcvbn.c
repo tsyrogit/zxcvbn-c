@@ -150,7 +150,7 @@ static ZxcMatch_t *AllocMatch()
 
 /**********************************************************************************
  * Add new match struct to linked list of matches. List ordered with shortest at
- * head of list.
+ * head of list. Note: passed new match struct in parameter Nu may be de allocated.
  */
 static void AddResult(ZxcMatch_t **HeadRef, ZxcMatch_t *Nu)
 {
@@ -180,6 +180,34 @@ static void AddResult(ZxcMatch_t **HeadRef, ZxcMatch_t *Nu)
         /* New entry has different length, so add it */
         Nu->Next = *HeadRef;
         *HeadRef = Nu;
+    }
+}
+
+/**********************************************************************************
+ * See if the match is repeated. If it is then add a new repeated match to the results.
+ */
+static void AddMatchRepeats(ZxcMatch_t **Result, ZxcMatch_t *Match, const uint8_t *Passwd, int MaxLen)
+{
+    int Len = Match->Length;
+    const uint8_t *Rpt = Passwd + Len;
+    int RepeatCount = 2;
+
+    while(MaxLen >= (Len * RepeatCount))
+    {
+        if (strncmp((const char *)Passwd, (const char *)Rpt, Len) == 0)
+        {
+            /* Found a repeat */
+            ZxcMatch_t *p = AllocMatch();
+            p->Entrpy = Match->Entrpy + log(RepeatCount);
+            p->Type = (ZxcTypeMatch_t)(Match->Type + MULTIPLE_MATCH);
+            p->Length = Len * RepeatCount;
+            p->Begin = Match->Begin;
+            AddResult(Result, p);
+        }
+        else
+            break;
+        ++RepeatCount;
+        Rpt += Len;
     }
 }
 
@@ -239,16 +267,17 @@ static const uint64_t CrcTable[16] =
 
 static const unsigned int MAGIC = 'z' + ('x'<< 8) + ('c' << 16) + ('v' << 24);
 
-static unsigned int NumNodes, NumChildLocs, NumRanks, NumChildMaps;
+static unsigned int NumNodes, NumChildLocs, NumRanks, NumWordEnd, NumChildMaps;
 static unsigned int SizeChildMapEntry, NumLargeCounts, NumSmallCounts, SizeCharSet;
 
 static unsigned int   *DictNodes;
-static unsigned short *ChildLocs;
+static uint8_t        *WordEndBits;
+static unsigned int   *ChildLocs;
 static unsigned short *Ranks;
 static uint8_t        *ChildMap;
 static uint8_t        *EndCountLge;
 static uint8_t        *EndCountSml;
-static uint8_t        *CharSet;
+static char           *CharSet;
 
 /**********************************************************************************
  * Calculate the CRC-64 of passed data.
@@ -298,6 +327,8 @@ int ZxcvbnInit(const char *Filename)
             i = 0;
         if (!MyReadFile(f, &NumRanks, sizeof NumRanks))
             i = 0;
+        if (!MyReadFile(f, &NumWordEnd, sizeof NumWordEnd))
+            i = 0;
         if (!MyReadFile(f, &NumChildMaps, sizeof NumChildMaps))
             i = 0;
         if (!MyReadFile(f, &SizeChildMapEntry, sizeof SizeChildMapEntry))
@@ -310,15 +341,15 @@ int ZxcvbnInit(const char *Filename)
             i = 0;
 
         /* Validate the header data */
-        if (NumNodes >= (1<<16))
+        if (NumNodes >= (1<<17))
             i = 1;
-        if (NumChildLocs >= (1<<17))
+        if (NumChildLocs >= (1<<BITS_CHILD_MAP_INDEX))
             i = 2;
-        if (NumChildMaps >= (1<<13))
+        if (NumChildMaps >= (1<<BITS_CHILD_PATT_INDEX))
             i = 3;
         if ((SizeChildMapEntry*8) < SizeCharSet)
             i = 4;
-        if (NumLargeCounts >= (1<<8))
+        if (NumLargeCounts >= (1<<9))
             i = 5;
         if (NumSmallCounts != NumNodes)
             i = 6;
@@ -332,15 +363,15 @@ int ZxcvbnInit(const char *Filename)
         Crc = CalcCrc64(Crc, &NumNodes,     sizeof NumNodes);
         Crc = CalcCrc64(Crc, &NumChildLocs, sizeof NumChildLocs);
         Crc = CalcCrc64(Crc, &NumRanks,     sizeof NumRanks);
+        Crc = CalcCrc64(Crc, &NumWordEnd,   sizeof NumWordEnd);
         Crc = CalcCrc64(Crc, &NumChildMaps, sizeof NumChildMaps);
         Crc = CalcCrc64(Crc, &SizeChildMapEntry, sizeof SizeChildMapEntry);
         Crc = CalcCrc64(Crc, &NumLargeCounts,   sizeof NumLargeCounts);
         Crc = CalcCrc64(Crc, &NumSmallCounts,   sizeof NumSmallCounts);
         Crc = CalcCrc64(Crc, &SizeCharSet,      sizeof SizeCharSet);
 
-        DictSize = NumNodes*sizeof(unsigned int) + NumChildLocs*sizeof(unsigned short) + NumRanks*sizeof(unsigned short) +
-                        NumChildMaps*SizeChildMapEntry + NumLargeCounts + NumSmallCounts + SizeCharSet;
-
+        DictSize = NumNodes*sizeof(*DictNodes) + NumChildLocs*sizeof(*ChildLocs) + NumRanks*sizeof(*Ranks) +
+                   NumWordEnd + NumChildMaps*SizeChildMapEntry + NumLargeCounts + NumSmallCounts + SizeCharSet;
         if (DictSize < MAX_DICT_FILE_SIZE)
         {
             DictNodes = MallocFn(unsigned int, DictSize / sizeof(unsigned int) + 1);
@@ -363,13 +394,15 @@ int ZxcvbnInit(const char *Filename)
             DictNodes = 0;
             return 0;
         }
+        fflush(stdout);
         /* Set pointers to the data */
-        ChildLocs = (unsigned short *)(DictNodes + NumNodes);
-        Ranks = ChildLocs + NumChildLocs;
-        ChildMap = (unsigned char*)(Ranks + NumRanks);
+        ChildLocs = DictNodes + NumNodes;
+        Ranks = (unsigned short *)(ChildLocs + NumChildLocs);
+        WordEndBits = (unsigned char *)(Ranks + NumRanks);
+        ChildMap = (unsigned char*)(WordEndBits + NumWordEnd);
         EndCountLge = ChildMap + NumChildMaps*SizeChildMapEntry;
         EndCountSml = EndCountLge + NumLargeCounts;
-        CharSet = EndCountSml + NumSmallCounts;
+        CharSet = (char *)EndCountSml + NumSmallCounts;
         CharSet[SizeCharSet] = 0;
         return 1;
     }
@@ -417,7 +450,7 @@ typedef struct
 /* Struct holding working data for the word match */
 typedef struct
 {
-    int     StartLoc;
+    uint32_t StartLoc;
     int     Ordinal;
     int     PwdLength;
     int     Begin;
@@ -496,7 +529,7 @@ static void DictionaryEntropy(ZxcMatch_t *m, DictMatchInfo_t *Extra, const uint8
     /* Add allowance for uppercase letters */
     if (Extra->Caps)
     {
-       if (Extra->Caps == m->Length)
+        if (Extra->Caps == m->Length)
         {
             /* All uppercase, common case so only 1 bit */
             e += log(2.0);
@@ -519,7 +552,6 @@ static void DictionaryEntropy(ZxcMatch_t *m, DictMatchInfo_t *Extra, const uint8
             if (e > 0.0)
                 e = log(e);
         }
-        
     }
     /* Add allowance for using leet substitution */
     if (Extra->NumLeet)
@@ -567,7 +599,7 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
     int Ord = Wrk->Ordinal;
     int Caps = Wrk->Caps;
     int Lower = Wrk->Lower;
-    int NodeLoc = Wrk->StartLoc;
+    unsigned int NodeLoc = Wrk->StartLoc;
     uint8_t *PossChars = Wrk->PossChars;
     int NumPossChrs = Wrk->NumPossChrs;
     const uint8_t *Pwd = Passwd;
@@ -588,7 +620,7 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
             /* Get char and set of possible chars at current point in word. */
             const uint8_t *Bmap;
             c = *Passwd;
-            Bmap = ChildMap + (NodeData & ((1<<13)-1)) * SizeChildMapEntry;
+            Bmap = ChildMap + (NodeData & ((1<<BITS_CHILD_PATT_INDEX)-1)) * SizeChildMapEntry;
             NumPossChrs = ListPossibleChars(PossChars, Bmap);
 
             /* Make it lowercase and update lowercase, uppercase counts */
@@ -642,7 +674,7 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
                 }
                 return;
             }
-        }   
+        }
         q = CharBinSearch(c, PossChars, NumPossChrs, 1);
         if (q)
         {
@@ -660,30 +692,34 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
         }
         /* Add all the end counts of the child nodes before the one that matches */
         x = (q - Wrk->PossChars);
-        y = (NodeData >> 13) & ((1<<17)-1);
+        y = (NodeData >> BITS_CHILD_PATT_INDEX) & ((1 << BITS_CHILD_MAP_INDEX) - 1);
         NodeLoc = ChildLocs[x+y];
         for(w=0; w<x; ++w)
         {
-            int Cloc = ChildLocs[w+y];
+            unsigned int Cloc = ChildLocs[w+y];
             z = EndCountSml[Cloc];
-            if (DictNodes[Cloc] & (1<<31))
+            if (Cloc < NumLargeCounts)
                 z += EndCountLge[Cloc]*256;
             Ord += z;
         }
 
         /* Move to next node */
         NodeData = DictNodes[NodeLoc];
-        if (NodeData & (1<<30))
+        if (WordEndBits[NodeLoc >> 3] & (1<<(NodeLoc & 7)))
         {
             /* Word matches, save result */
+            unsigned int v;
             ZxcMatch_t *p;
+            v = Ranks[Ord];
+            if (v & (1<<15))
+                v = (v & ((1 << 15) - 1)) * 4 + (1 << 15);
             Extra->Caps = Caps;
-            Extra->Rank = Ranks[Ord];
+            Extra->Rank = v;
             Extra->Lower = Lower;
             for(x = 0, y = sizeof Extra->Leeted - 1; y >= 0; --y)
                 x += Wrk->Leeted[y];
             Extra->NumLeet = x;
-            
+
             memcpy(Extra->UnLeet, Wrk->UnLeet, sizeof Extra->UnLeet);
             memcpy(Extra->Leeted, Wrk->Leeted, sizeof Extra->Leeted);
 
@@ -695,8 +731,8 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
             p->Length = Wrk->PwdLength + Len + 1;
             p->Begin = Wrk->Begin;
             DictionaryEntropy(p, Extra, Pwd);
+            AddMatchRepeats(Result, p, Pwd, MaxLen);
             AddResult(Result, p);
-
             ++Ord;
         }
     }
@@ -745,8 +781,6 @@ static void UserMatch(ZxcMatch_t **Result, const char *Words[], const uint8_t *P
             {
                 ++Lowers;
             }
-            
-            
             /* See if current char is a leet and can be converted  */
             q = CharBinSearch(c, L33TCnv, sizeof L33TCnv / LEET_NORM_MAP_SIZE, LEET_NORM_MAP_SIZE);
             if (q)
@@ -819,8 +853,8 @@ static void UserMatch(ZxcMatch_t **Result, const char *Words[], const uint8_t *P
             Extra.NumLeet = Leets;
             Extra.Rank = Rank+1;
             DictionaryEntropy(p, &Extra, Passwd);
+            AddMatchRepeats(Result, p, Passwd, MaxLen);
             AddResult(Result, p);
-            
         }
     }
 }
@@ -1129,7 +1163,7 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
                     /* Math is similar to extra entropy from uppercase letters in dictionary matches. */
                     int Shift = Extra.Shifts;
                     int Unshift = Len - Shift;
-                    
+
                     Degree = 0.0;
                     j = Shift;
                     if (j > Unshift)
@@ -1146,6 +1180,7 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
                 p->Begin = Start;
                 p->Entrpy = Entropy;
                 p->Length = Len;
+                AddMatchRepeats(Result, p, Passwd, MaxLen);
                 AddResult(Result, p);
                 break;
             }
@@ -1290,6 +1325,7 @@ static void DateMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, int
             p->Type = DATE_MATCH;
             p->Length = Len;
             p->Begin = Start;
+            AddMatchRepeats(Result, p, Passwd, MaxLen);
             AddResult(Result, p);
             PrevLen = Len;
         }
@@ -1336,8 +1372,32 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
             AddResult(Result, p);
         }
     }
-}
 
+    /* Try to match a repeated sequence e.g. qxno6qxno6 */
+    for(Len = MaxLen/2; Len >= MIN_REPEAT_LEN; --Len)
+    {
+        const uint8_t *Rpt = Passwd + Len;
+        int RepeatCount = 2;
+        while(MaxLen >= (Len * RepeatCount))
+        {
+            if (strncmp((const char *)Passwd, (const char *)Rpt, Len) == 0)
+            {
+                /* Found a repeat */
+                int c = Cardinality(Passwd, Len);
+                ZxcMatch_t *p = AllocMatch();
+                p->Entrpy = log((double)c) * Len + log(RepeatCount);
+                p->Type = (ZxcTypeMatch_t)(BRUTE_MATCH + MULTIPLE_MATCH);
+                p->Length = Len * RepeatCount;
+                p->Begin = Start;
+                AddResult(Result, p);
+            }
+            else
+                break;
+            ++RepeatCount;
+            Rpt += Len;
+        }
+    }
+}
 
 /**********************************************************************************
  **********************************************************************************
@@ -1360,8 +1420,9 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
     int Len=0;
     int SetLow, SetHigh, Dir;
     uint8_t First, Next, IsDigits;
-
+    const uint8_t *Pwd;
     Passwd += Start;
+    Pwd = Passwd;
     First = Passwd[0];
     Dir = Passwd[1] - First;
     Len = 0;
@@ -1423,7 +1484,8 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
         /* Enough repeated char, so create results from number found down to min acceptable length */
         int i;
         double e;
-        if ((First == 'a') || (First == '1'))
+        if ((First == 'a') || (First == 'A') || (First == 'z') || (First == 'Z') ||
+            (First == '0') || (First == '1') || (First == '9'))
             e = log(2.0);
         else if (IsDigits)
             e = log(10.0);
@@ -1442,18 +1504,17 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
             p->Begin = Start;
             p->Length = i;
             p->Entrpy = e + log((double)i);
+            AddMatchRepeats(Result, p, Pwd, MaxLen);
             AddResult(Result, p);
         }
     }
 }
-
 
 /**********************************************************************************
  **********************************************************************************
  * Begin top level zxcvbn code
  **********************************************************************************
  *********************************************************************************/
-
 
 /**********************************************************************************
  * Matching a password is treated as a problem of finding the minimum distance
@@ -1527,7 +1588,7 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     /* End node has infinite distance/entropy, start node has 0 distance */
     Nodes[i].Dist = DBL_MAX;
     Nodes[0].Dist = 0.0;
-    
+
     /* Reduce the paths using Dijkstra's algorithm */
     for(i = 0; i < Len; ++i)
     {
@@ -1577,7 +1638,7 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         {
             ZxcMatch_t *Xp;
             i = Zp->Begin;
-            
+
             /* Remove all but required path */
             Xp = Nodes[i].Paths;
             Nodes[i].Paths = 0;
@@ -1625,7 +1686,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         }
     }
     FreeFn(Nodes);
-    
     return e;
 }
 
