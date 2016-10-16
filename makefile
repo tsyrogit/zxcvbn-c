@@ -9,7 +9,7 @@ CPPFLAGS += -I.
 TARGET_LIB = libzxcvbn.so.0.0.0
 SONAME = libzxcvbn.so.0
 
-WORDS = words-eng_wiki.txt words-english.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
+WORDS = words-eng_wiki.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
 
 all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib
 
