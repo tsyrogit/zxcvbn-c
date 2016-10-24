@@ -23,5 +23,6 @@ zxcvbn.cpp
 zxcvbn.dict
 test-*file
 test-*line
+test-*lib
 dictgen
 dict-*.h
