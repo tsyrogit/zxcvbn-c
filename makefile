@@ -84,7 +84,7 @@ test: test-file test-inline test-c++inline test-c++file test-shlib test-statlib 
 
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
-	rm -f test-inline zxcvbn-inline.o test-c++inline zxcvbn-c++inline.o
+	rm -f test-inline zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
 	rm -f dict-*.h zxcvbn.dict zxcvbn.cpp test.cpp
 	rm -f dictgen
 	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib libzxcvbn.a test-statlib
