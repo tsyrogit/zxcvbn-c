@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
 #include <sys/time.h>
 #include <zxcvbn.h>
 
@@ -67,7 +66,7 @@ static void CalcPass(const char *Pwd, int Quiet)
 
         Len = strlen(Pwd);
         m = e - m;
-        printf("Pass %s \tLength %d\tEntropy bits=%.3f log10=%.3f\tMulti-word extra bits=%.1f factor=%.1f\n", Pwd, Len, e, e * 0.301029996, m, pow(2.0,m));
+        printf("Pass %s \tLength %d\tEntropy bits=%.3f log10=%.3f\tMulti-word extra bits=%.1f\n", Pwd, Len, e, e * 0.301029996, m);
         p = Info;
         ChkLen = 0;
         while(p)
@@ -202,9 +201,10 @@ int DoChecks(char *file)
 
 int main(int argc, char **argv)
 {
-    int i, Quiet, Checks;
+    int i, Quiet, Checks, White;
     Quiet = 0;
     Checks = 0;
+    White = 0;
     if (!ZxcvbnInit("zxcvbn.dict"))
     {
         printf("Failed to open dictionary file\n");
@@ -212,19 +212,26 @@ int main(int argc, char **argv)
     }
     if ((argc > 1) && (argv[1][0] == '-'))
     {
-        Checks = !strcmp(argv[1], "-t");
-        Quiet = !strcmp(argv[1], "-q");
-        if ((Checks + Quiet) == 0)
+        if (!strcmp(argv[1], "-qs") || !strcmp(argv[1], "-sq"))
+            Quiet = White = 1;
+        if (!strcmp(argv[1], "-t"))
+            Checks = 1;
+        if (!strcmp(argv[1], "-q"))
+            Quiet = 1;
+        if (!strcmp(argv[1], "-s"))
+            White = 1;
+        if ((Checks + Quiet + White) == 0)
         {
             char *s = strrchr(argv[0], '/');
             if (s == NULL)
                 s = argv[0];
             else
                 ++s;
-            printf( "Usage: %s [ -q ] [ pwd1 pwd2 ... ]\n"
+            printf( "Usage: %s [ -q | -qs ] [ pwd1 pwd2 ... ]\n"
                     "          Output entropy of given passwords. If no passwords on command line read\n"
                     "           them from stdin.\n"
                     "          -q option stops password analysis details from being output.\n"
+                    "          -s Ignore anything from space on a line when reading from stdin.\n"
                     "       %s -t file\n"
                     "          Read the file and check for correct results.\n", s, s);
 
@@ -252,6 +259,11 @@ int main(int argc, char **argv)
             for(i = 0; i < (int)(sizeof Line - 1); ++i)
             {
                 if (Line[i] < ' ')
+                {
+                    Line[i] = 0;
+                    break;
+                }
+                if (White && (Line[i] == ' '))
                 {
                     Line[i] = 0;
                     break;

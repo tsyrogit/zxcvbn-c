@@ -390,8 +390,9 @@ struct StringInt
     StringInt * Self() const { return const_cast<StringInt *>(this); }
 };
 
-typedef std::map<std::string, Entry> EntryMap_t;
-typedef std::list<NodeSPtr> NodeList_t;
+typedef map<string, Entry> EntryMap_t;
+typedef list<string> StringList_t;
+typedef list<NodeSPtr> NodeList_t;
 typedef set<StringInt> StringIntSet_t;
 typedef basic_string<int> StringOfInts;
 typedef vector<unsigned int> UintVect;
@@ -401,23 +402,23 @@ typedef vector<StringInt> StringIntVect_t;
 
 // Variables holding 'interesting' information on the data
 unsigned int MaxLength, MinLength, NumChars, NumInWords, NumDuplicate;
-int MaxOccurReduce;
-string MaxOccurStr;
 struct FileInfo
 {
-    FileInfo() : Words(0), BruteIgnore(0), Accented(0), Dups(0), Used(0) { }
+    FileInfo() : Words(0), BruteIgnore(0), Accented(0), Dups(0), Used(0), Rank(0) { }
     string Name;
+    StringList_t Pwds;
     int Words;
     int BruteIgnore;
     int Accented;
     int Dups;
     int Used;
+    int Rank;
 };
 
 /**********************************************************************************
- * Read the file of words and add them to Entries.
+ * Read the file of words and add them to the file information.
  */
-static bool ReadInputFile(EntryMap_t & Entries, const string & FileName, int DictNum, FileInfo &Info, int MaxRank)
+static bool ReadInputFile(const string & FileName, FileInfo &Info, int MaxRank)
 {
     ifstream f(FileName.c_str());
     if (!f.is_open())
@@ -473,43 +474,51 @@ static bool ReadInputFile(EntryMap_t & Entries, const string & FileName, int Dic
         if (y < MinLength)
             MinLength = y;
         NumChars += y;
-        ++NumInWords;
-        ++Rank;
 
-        EntryMap_t::iterator It = Entries.find(Line);
-        if (It != Entries.end())
-        {
-            // This is a repeat of a previous entry
-            int r = It->second.mRank;
-            if (r > Rank)
-            {
-                // Remember new lower rank
-                It->second.mRank = Rank;
-                It->second.mDict = DictNum;
-                It->second.mOccurs += 1;
-                r -= Rank;
-                if (r > MaxOccurReduce)
-                {
-                    MaxOccurStr = Line;
-                    MaxOccurReduce = r;
-                }
-            }
-            else
-                ++Info.Dups;
-            ++NumDuplicate;
-        }
-        else
-        {
-            // New word
-            Entry e;
-            e.mDict = DictNum;
-            e.mRank = Rank;
-            Entries.insert(std::pair<std::string, Entry>(Line, e));
-            ++Info.Used;
-        }
+        Info.Pwds.push_back(Line);
+        ++Rank;
     }
     f.close();
     return true;
+}
+
+static void CombineWordLists(EntryMap_t & Entries, FileInfo *Infos, int NumInfo)
+{
+    bool Done = false;
+    int Rank = 0;
+    while(!Done)
+    {
+        int i;
+        ++Rank;
+        Done = true;
+        for(i = 0; i < NumInfo; ++i)
+        {
+            FileInfo *p = Infos + i;
+            while(!p->Pwds.empty())
+            {
+                Done = false;
+                string Word = p->Pwds.front();
+                p->Pwds.pop_front();
+                EntryMap_t::iterator It = Entries.find(Word);
+                if (It != Entries.end())
+                {
+                    // Word is repeat of one from another file
+                    p->Dups += 1;
+                    ++NumDuplicate;
+                }
+                else
+                {
+                    // New word, add it
+                    Entry e;
+                    e.mDict = i;
+                    e.mRank = Rank;
+                    Entries.insert(std::pair<std::string, Entry>(Word, e));
+                    p->Used += 1;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /**********************************************************************************
@@ -1597,10 +1606,11 @@ int main(int argc, char *argv[])
                         << endl;
                 return 1;
             }
-            ReadInputFile(Entries, FileName, i, InInfo[NumFiles], MaxRank);
+            ReadInputFile(FileName, InInfo[NumFiles], MaxRank);
             if (NumFiles < int(sizeof InInfo / sizeof InInfo[0] - 1))
                 ++NumFiles;
         }
+        CombineWordLists(Entries, InInfo, NumFiles);
         if (Verbose)
         {
             if (!OutFile && (OutType == OUT_C_CODE))
@@ -1611,9 +1621,9 @@ int main(int argc, char *argv[])
                 cout << "Read input file " << Fi->Name << endl;
                 cout << "   Input words  " << Fi->Words << endl;
                 cout << "   Used words   " << Fi->Used << endl;
-                cout << /*"        Unused  " << Fi->BruteIgnore <<
+                cout << "        Unused  " << Fi->BruteIgnore <<
                         " Bruteforce compare, " << Fi->Accented <<
-                        " Accented char, " << Fi->Dups << " Duplicates" << */ endl;
+                        " Accented char, " << Fi->Dups << " Duplicates" << endl;
             }
         }
         bool InputCharSet[256];
@@ -1635,7 +1645,6 @@ int main(int argc, char *argv[])
             cout << "Num input chars = " << NumChars << endl;
             cout << "Num input words = " << NumInWords << endl;
             cout << "Duplicate words = " << NumDuplicate;
-            cout << "  (Rank most reduced for \"" << MaxOccurStr.c_str() << "\")"<< endl;
             cout << "Number of Ends  = " << NumEnds << endl;
             cout << "Number of Nodes = " << NumNodes << endl;
             cout << "Trie height = " << Hi << endl;
