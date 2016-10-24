@@ -417,7 +417,7 @@ struct FileInfo
 /**********************************************************************************
  * Read the file of words and add them to Entries.
  */
-static bool ReadInputFile(EntryMap_t & Entries, const string & FileName, int DictNum, FileInfo &Info)
+static bool ReadInputFile(EntryMap_t & Entries, const string & FileName, int DictNum, FileInfo &Info, int MaxRank)
 {
     ifstream f(FileName.c_str());
     if (!f.is_open())
@@ -431,7 +431,7 @@ static bool ReadInputFile(EntryMap_t & Entries, const string & FileName, int Dic
     // indicates a very popular or bad password).
     int Rank = 0;
     string Line;
-    while(getline(f, Line))
+    while(getline(f, Line) && (Rank < MaxRank))
     {
         // Truncate at first space or tab to leave just the word in case additional info on line
         string::size_type y = Line.find_first_of("\t ");
@@ -1515,6 +1515,7 @@ enum { OUT_C_CODE, OUT_BINARY, OUT_TESTER };
 int main(int argc, char *argv[])
 {
     int i;
+    int MaxRank = 999999999;
     int OutType = OUT_C_CODE;
     bool Verbose = false;
     bool Comments = false;
@@ -1562,6 +1563,18 @@ int main(int argc, char *argv[])
                     HashFile = argv[i];
                 continue;
             }
+            if (FileName == "-r")
+            {
+                // Ignore words with too high rank
+                if (++i < argc)
+                {
+                    char *p=0;
+                    MaxRank = strtol(argv[i], &p, 0);
+                    if ((MaxRank < 1000) || *p)
+                        MaxRank = 999999999;
+                    continue;
+                }
+            }
             if (FileName == "-v")
             {
                 Verbose = true;
@@ -1574,6 +1587,7 @@ int main(int argc, char *argv[])
                         "     -b        Generate a binary output file\n"
                         "     -t        Generate a test file for testing zxcvbn\n"
                         "     -c        Add comments to output file if C code mode\n"
+                        "     -r number Ignore words with rank greater than number (must be >=1000)\n"
                         "     -v        Additional information output\n"
                         "     -h Hfile  Write file checksum to file Hfile as C code (for -b mode)\n"
                         "     -o Ofile  Write output to file Ofile\n"
@@ -1583,7 +1597,7 @@ int main(int argc, char *argv[])
                         << endl;
                 return 1;
             }
-            ReadInputFile(Entries, FileName, i, InInfo[NumFiles]);
+            ReadInputFile(Entries, FileName, i, InInfo[NumFiles], MaxRank);
             if (NumFiles < int(sizeof InInfo / sizeof InInfo[0] - 1))
                 ++NumFiles;
         }
