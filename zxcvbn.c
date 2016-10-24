@@ -50,12 +50,31 @@
 #include "stdafx.h"
 #endif
 
+/* Minimum number of characters in a incrementing/decrementing sequence match */
+#define MIN_SEQUENCE_LEN 3
+
+/* Year range for data matching */
+#define MIN_YEAR 1901
+#define MAX_YEAR 2050
+
+/* Minimum number of characters in a spatial matching sequence */
+#define MIN_SPATIAL_LEN 3
+
+/* Minimum number of characters in a repeat sequence match */
+#define MIN_REPEAT_LEN 2
+
+/* Additional entropy to add when password is made of multiple matches. Use different
+ * amounts depending on whether the match is at the end of the password, or in the
+ * middle. If the match is at the begining then there is no additional entropy.
+ */
+#define MULTI_END_ADDITION 1.0
+#define MULTI_MID_ADDITION 1.75
+
 /*################################################################################*
  *################################################################################*
  * Begin utility function code
  *################################################################################*
  *################################################################################*/
-
 
 /**********************************************************************************
  * Binomial coefficient function. Uses method described at
@@ -152,8 +171,21 @@ static ZxcMatch_t *AllocMatch()
  * Add new match struct to linked list of matches. List ordered with shortest at
  * head of list. Note: passed new match struct in parameter Nu may be de allocated.
  */
-static void AddResult(ZxcMatch_t **HeadRef, ZxcMatch_t *Nu)
+static void AddResult(ZxcMatch_t **HeadRef, ZxcMatch_t *Nu, int MaxLen)
 {
+    /* Adjust the entropy to be used for calculations depending on whether the passed match is
+     * at the begining, middle or end of the password
+     */
+    if (Nu->Begin)
+    {
+        if (Nu->Length >= MaxLen)
+            Nu->MltEnpy = Nu->Entrpy + MULTI_END_ADDITION * log(2.0);
+        else
+            Nu->MltEnpy = Nu->Entrpy + MULTI_MID_ADDITION * log(2.0);
+    }
+    else
+        Nu->MltEnpy = Nu->Entrpy;
+
     /* Find the correct insert point */
     while(*HeadRef && ((*HeadRef)->Length < Nu->Length))
         HeadRef = &((*HeadRef)->Next);
@@ -162,7 +194,7 @@ static void AddResult(ZxcMatch_t **HeadRef, ZxcMatch_t *Nu)
     if (*HeadRef && ((*HeadRef)->Length == Nu->Length))
     {
         /* New entry has same length as existing, so one of them needs discarding */
-        if ((*HeadRef)->Entrpy <= Nu->Entrpy)
+        if ((*HeadRef)->MltEnpy <= Nu->MltEnpy)
         {
             /* Existing entry has lower entropy - keep it, discard new entry */
             FreeFn(Nu);
@@ -202,7 +234,7 @@ static void AddMatchRepeats(ZxcMatch_t **Result, ZxcMatch_t *Match, const uint8_
             p->Type = (ZxcTypeMatch_t)(Match->Type + MULTIPLE_MATCH);
             p->Length = Len * RepeatCount;
             p->Begin = Match->Begin;
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
         }
         else
             break;
@@ -444,7 +476,6 @@ typedef struct
     int NumLeet;                     /* Total number of leeted characters */
     uint8_t  Leeted[sizeof L33TChr]; /* Number of leeted chars for each char found in L33TChr */
     uint8_t  UnLeet[sizeof L33TChr]; /* Number of normal chars for each char found in L33TChr */
-    
 } DictMatchInfo_t;
 
 /* Struct holding working data for the word match */
@@ -582,7 +613,6 @@ static void DictionaryEntropy(ZxcMatch_t *m, DictMatchInfo_t *Extra, const uint8
         if (d < log(2.0))
             d = log(2.0);
         e += d;
-        /*if(zz)printf(",%f ", d/log(2.0)); */
     }
     /* Add entropy due to word's rank */
     e += log((double)Extra->Rank);
@@ -732,7 +762,7 @@ static void DoDictMatch(const uint8_t *Passwd, int Start, int MaxLen, DictWork_t
             p->Begin = Wrk->Begin;
             DictionaryEntropy(p, Extra, Pwd);
             AddMatchRepeats(Result, p, Pwd, MaxLen);
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
             ++Ord;
         }
     }
@@ -854,7 +884,7 @@ static void UserMatch(ZxcMatch_t **Result, const char *Words[], const uint8_t *P
             Extra.Rank = Rank+1;
             DictionaryEntropy(p, &Extra, Passwd);
             AddMatchRepeats(Result, p, Passwd, MaxLen);
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
         }
     }
 }
@@ -886,8 +916,6 @@ static void DictionaryMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Star
  * Begin keyboard spatial sequence matching code
  *################################################################################*
  *################################################################################*/
-
-#define MIN_SPATIAL_LEN 3
 
 /* Struct to hold information on a keyboard layout */
 typedef struct Keyboard
@@ -1181,7 +1209,7 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
                 p->Entrpy = Entropy;
                 p->Length = Len;
                 AddMatchRepeats(Result, p, Passwd, MaxLen);
-                AddResult(Result, p);
+                AddResult(Result, p, MaxLen);
                 break;
             }
         }
@@ -1194,9 +1222,6 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
  * Begin date matching code
  *################################################################################*
  *################################################################################*/
-
-#define MIN_YEAR 1901
-#define MAX_YEAR 2019
 
 /* The possible date formats ordered by length (d for day, m for month, */
 /*  y for year, ? for separator) */
@@ -1326,7 +1351,7 @@ static void DateMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, int
             p->Length = Len;
             p->Begin = Start;
             AddMatchRepeats(Result, p, Passwd, MaxLen);
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
             PrevLen = Len;
         }
     }
@@ -1338,8 +1363,6 @@ static void DateMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, int
  * Begin repeated character matching code
  *################################################################################*
  *################################################################################*/
-
-#define MIN_REPEAT_LEN 3
 
 /**********************************************************************************
  * Try to match password part as a set of repeated characters.
@@ -1369,7 +1392,7 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
             p->Begin = Start;
             p->Length = i;
             p->Entrpy = log(Card * i);
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
         }
     }
 
@@ -1389,7 +1412,7 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
                 p->Type = (ZxcTypeMatch_t)(BRUTE_MATCH + MULTIPLE_MATCH);
                 p->Length = Len * RepeatCount;
                 p->Begin = Start;
-                AddResult(Result, p);
+                AddResult(Result, p, MaxLen);
             }
             else
                 break;
@@ -1405,7 +1428,6 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
  **********************************************************************************
  *********************************************************************************/
 
-#define MIN_SEQUENCE_LEN 3
 #define MAX_SEQUENCE_STEP 5
 /**********************************************************************************
  * Try to match password part as a set of incrementing or decrementing characters.
@@ -1505,7 +1527,7 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
             p->Length = i;
             p->Entrpy = e + log((double)i);
             AddMatchRepeats(Result, p, Pwd, MaxLen);
-            AddResult(Result, p);
+            AddResult(Result, p, MaxLen);
         }
     }
 }
@@ -1549,12 +1571,13 @@ typedef struct
  */
 double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
 {
-    int i;
+    int i, j;
     ZxcMatch_t *Zp;
     Node_t *Np;
     double e;
     int Len = strlen(Pwd);
     const uint8_t *Passwd = (const uint8_t *)Pwd;
+    uint8_t *RevPwd;
     /* Create the paths */
     Node_t *Nodes = MallocFn(Node_t, Len+1);
     memset(Nodes, 0, (Len+1) * sizeof *Nodes);
@@ -1573,17 +1596,68 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         SequenceMatch(&(Nodes[i].Paths), Passwd, i, MaxLen);
         RepeatMatch(&(Nodes[i].Paths), Passwd, i, MaxLen);
 
-        /* Add a default one character bruteforce path */
-        Zp = AllocMatch();
-        Zp->Type = BRUTE_MATCH;
-        Zp->Begin = i;
-        Zp->Length = 1;
-        Zp->Entrpy = e;
-        AddResult(&(Nodes[i].Paths), Zp);
-
         /* Initially set distance to nearly infinite */
         Nodes[i].Dist = DBL_MAX;
+    }
 
+    /* Reverse dictionary words check */
+    RevPwd = MallocFn(uint8_t, Len+1);
+    for(i = Len-1, j = 0; i >= 0; --i, ++j)
+        RevPwd[j] = Pwd[i];
+    RevPwd[j] = 0;
+    for(i = 0; i < Len; ++i)
+    {
+        ZxcMatch_t *Path = 0;
+        int MaxLen = Len - i;
+        DictionaryMatch(&Path, RevPwd, i, MaxLen);
+        UserMatch(&Path, UserDict, RevPwd, i, MaxLen);
+
+        /* Now transfer any reverse matches to the normal results */
+        while(Path)
+        {
+            ZxcMatch_t *Nxt = Path->Next;
+            Path->Next = 0;
+            Path->Begin = Len - (Path->Begin + Path->Length);
+            AddResult(&(Nodes[Path->Begin].Paths), Path, MaxLen);
+            Path = Nxt;
+        }
+    }
+
+    /* Add a set of brute force matches. Start by getting all the start points and all */
+    /* points at character position after end of the matches.  */
+    memset(RevPwd, 0, Len+1);
+    for(i = 0; i < Len; ++i)
+    {
+        ZxcMatch_t *Path = Nodes[i].Paths;
+        while(Path)
+        {
+            RevPwd[Path->Begin] |= 1;
+            RevPwd[Path->Begin + Path->Length] |= 2;
+            Path = Path->Next;
+        }
+    }
+    RevPwd[0] = 1;
+    RevPwd[Len] = 2;
+
+    /* Add the brute force matches */
+    for(i = 0; i < Len; ++i)
+    {
+        int MaxLen = Len - i;
+        int j;
+        if (!RevPwd[i])
+            continue;
+        for(j = i+1; j <= Len; ++j)
+        {
+            if (RevPwd[j])
+            {
+                Zp = AllocMatch();
+                Zp->Type = BRUTE_MATCH;
+                Zp->Begin = i;
+                Zp->Length = j - i;
+                Zp->Entrpy = e * (j - i);
+                AddResult(&(Nodes[i].Paths), Zp, MaxLen);
+            }
+        }
     }
     /* End node has infinite distance/entropy, start node has 0 distance */
     Nodes[i].Dist = DBL_MAX;
@@ -1615,7 +1689,7 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         for(Zp = Np->Paths; Zp; Zp = Zp->Next)
         {
             Node_t *Ep = Np + Zp->Length;
-            double d = e + Zp->Entrpy;
+            double d = e + Zp->MltEnpy;
             if (!Ep->Visit &&  (d < Ep->Dist))
             {
                 /* Update as lower dist, also remember the 'from' node */
@@ -1649,20 +1723,11 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
                 {
                     /* Adjust the entropy to log to base 2 */
                     Xp->Entrpy /= log(2.0);
-                    if ((*Info) && (Xp->Type == BRUTE_MATCH) && ((*Info)->Type == BRUTE_MATCH))
-                    {
-                        /* Previous part and current are bruteforce, merge then into single entry */
-                        (*Info)->Begin = Xp->Begin;
-                        (*Info)->Length += Xp->Length;
-                        (*Info)->Entrpy += Xp->Entrpy;
-                        FreeFn(Xp);
-                    }
-                    else
-                    {
-                        /* Put previous part at head of info list */
-                        Xp->Next = *Info;
-                        *Info = Xp;
-                    }
+                    Xp->MltEnpy /= log(2.0);
+
+                    /* Put previous part at head of info list */
+                    Xp->Next = *Info;
+                    *Info = Xp;
                 }
                 else
                 {

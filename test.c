@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include <sys/time.h>
 #include <zxcvbn.h>
 
@@ -56,13 +57,17 @@ static void CalcPass(const char *Pwd, int Quiet)
         int Len, ChkLen;
         struct timeval t1, t2;
         ZxcMatch_t *Info, *p;
+        double m = 0.0;
 
         gettimeofday(&t1, 0);
         e = ZxcvbnMatch(Pwd, UsrDict, &Info);
         gettimeofday(&t2, 0);
+        for(p = Info; p; p = p->Next)
+            m += p->Entrpy;
 
         Len = strlen(Pwd);
-        printf("Pass %s \tLength %d\tEntropy bits=%.3f  log10=%.3f\n", Pwd, Len, e, e * 0.301029996);
+        m = e - m;
+        printf("Pass %s \tLength %d\tEntropy bits=%.3f log10=%.3f\tMulti-word extra bits=%.1f factor=%.1f\n", Pwd, Len, e, e * 0.301029996, m, pow(2.0,m));
         p = Info;
         ChkLen = 0;
         while(p)
