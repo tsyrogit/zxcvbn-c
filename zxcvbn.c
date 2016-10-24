@@ -1659,6 +1659,7 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
             }
         }
     }
+    FreeFn(RevPwd);
     /* End node has infinite distance/entropy, start node has 0 distance */
     Nodes[i].Dist = DBL_MAX;
     Nodes[0].Dist = 0.0;
