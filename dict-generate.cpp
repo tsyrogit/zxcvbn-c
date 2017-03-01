@@ -1046,7 +1046,7 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
     Out->write((char *)WordEnds, NumWordEnd);
     h(WordEnds, NumWordEnd);
     OutputSize += NumWordEnd;
-    delete WordEnds;
+    delete [] WordEnds;
 
     StringIntSet_t::iterator Its;
     string Str;
