@@ -95,6 +95,7 @@ public:
     unsigned int  GetAddr() const    { return mAddr; }
     NodeMap_t::iterator ChildBegin() { return mChild.begin(); }
     NodeMap_t::iterator ChildEnd()   { return mChild.end(); }
+    unsigned int  GetNumChild()      { return mChild.size(); }
     int           GetNumEnds() const { return mEndings; }
     NodeSPtr      FindChild(char);
     std::string   GetChildChars();
@@ -402,6 +403,9 @@ typedef vector<StringInt> StringIntVect_t;
 
 // Variables holding 'interesting' information on the data
 unsigned int MaxLength, MinLength, NumChars, NumInWords, NumDuplicate;
+static string PassWithMaxChilds, MaxChildChars;
+static unsigned int MaxNumChilds, MaxChildsPosn;
+
 struct FileInfo
 {
     FileInfo() : Words(0), BruteIgnore(0), Accented(0), Dups(0), Used(0), Rank(0) { }
@@ -686,6 +690,16 @@ static int CheckWord(NodeSPtr Root, const string & Str)
         if (e)
             ++i;
 
+        if (p->GetNumChild() > MaxNumChilds)
+        {
+            NodeMap_t::iterator Itc;
+            MaxNumChilds = p->GetNumChild();
+            MaxChildsPosn = x;
+            PassWithMaxChilds = Str;
+            MaxChildChars.clear();
+            for(Itc = p->ChildBegin(); Itc != p->ChildEnd(); ++Itc)
+                MaxChildChars += Itc->first;
+        }
         p = It->second;
     }
 
@@ -1063,8 +1077,10 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
         SetPtrs[p->i] = p;
     }
     // Output child bitmap
+    unsigned int CharSetLen = 0;
     for(Index = 0; Index < SetPtrs.size(); ++Index)
     {
+        unsigned int i, j;
         string::size_type z, y;
         StringInt *p;
         memset(Buf, 0, sizeof Buf);
@@ -1078,6 +1094,15 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
                 Buf[y/8] |= 1 << (y & 7);
             }
         }
+        // Find max bits set which indicates max number chars ued at a node
+        for(i = j = 0; i < 8 * sizeof Buf; ++i)
+        {
+            if (Buf[i/8] & (1 << (i & 7)))
+                ++j;
+        }
+        if (j > CharSetLen)
+            CharSetLen = j;
+
         Out->write((char *)Buf, BytePerEntry);
         h(Buf, BytePerEntry);
      }
@@ -1127,7 +1152,8 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
              "#define BITS_CHILD_PATT_INDEX " << BITS_CHILD_PATT_INDEX << "\n"
              "#define BITS_CHILD_MAP_INDEX  " << BITS_CHILD_MAP_INDEX << "\n" 
              "#define SHIFT_CHILD_MAP_INDEX BITS_CHILD_PATT_INDEX\n"
-             "#define SHIFT_WORD_ENDING_BIT (SHIFT_CHILD_MAP_INDEX + BITS_CHILD_MAP_INDEX)" << endl;
+             "#define SHIFT_WORD_ENDING_BIT (SHIFT_CHILD_MAP_INDEX + BITS_CHILD_MAP_INDEX)\n"
+             "#define CHARSET_SIZE " << (CharSetLen + 1) << endl;
         f.close();
     }
     return OutputSize;
@@ -1403,9 +1429,12 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
         }
         SetPtrs[p->i] = p;
     }
+    unsigned int CharSetLen = 0;
     x = 999;
+    Len = 0;
     for(Index = 0; Index < SetPtrs.size(); ++Index)
     {
+        unsigned int i, j;
         string::size_type z, y;
         StringInt *p;
         memset(Buf, 0, sizeof Buf);
@@ -1424,6 +1453,14 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
                 Buf[y/8] |= 1 << (y & 7);
             }
         }
+        // Find max bits set which indicates max number chars ued at a node
+        for(i = j = 0; i < 8 * sizeof Buf; ++i)
+        {
+            if (Buf[i/8] & (1 << (i & 7)))
+                ++j;
+        }
+        if (j > CharSetLen)
+            CharSetLen = j;
         for(z = 0; z < BytePerEntry; ++z)
         {
             y = Buf[z] & 0xFF;
@@ -1447,7 +1484,7 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
             x = 999;
         }
     }
-    *Out << "\n};" << endl;
+    *Out << "\n};\n#define CHARSET_SIZE " << (CharSetLen+1) << endl;
 
     // Output the top 8 bits of the node word endings count. Since node with >255 endings have
     // been placed at the begining, and ther are not too many of them the array is fairly small.
@@ -1714,6 +1751,8 @@ int main(int argc, char *argv[])
         {
             cout << "Node data array size " << NodeData.size() << endl;
             cout << "Child pointer array size " << ChildAddrs.size() << endl;
+            cout << "Max node childs " << MaxNumChilds <<  " (chars " << MaxChildChars << " ) at character index "
+                 << MaxChildsPosn << " using password " << PassWithMaxChilds.c_str() << endl;
         }
         shared_ptr<ofstream> fout;
         ostream *Out = &cout;

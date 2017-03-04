@@ -124,6 +124,8 @@ int DoChecks(char *file)
     int y = 0;
     int w = 0;
     int r = 0;
+    int Less = 0;
+    int More = 0;
     FILE *f = fopen(file, "r");
     if (f == NULL)
     {
@@ -185,17 +187,28 @@ int DoChecks(char *file)
         e = ZxcvbnMatch(Pwd, UsrDict, 0);
         x = e / Ent;
         /* More than 1% difference is a fail. */
-        if ((x > 1.01) || (x < 1.0/1.01))
+        if (x > 1.01)
         {
-            printf("Line %2d Calculated entropy %5.2f, expected %5.2f  <%s>\n", y, e, Ent, Pwd);
-            r = 1;
-            break;
+            ++More;
+            if (r < 10)
+            {
+                printf("Line %2d Calculated entropy %5.2f, expected %5.2f  <%s>\n", y, e, Ent, Pwd);
+                ++r;
+            }
+        }
+        else if (x < 1.0/1.01)
+        {
+            ++Less;
+            if (r < 10)
+            {
+                printf("Line %2d Calculated entropy %5.2f, expected %5.2f  <%s>\n", y, e, Ent, Pwd);
+                ++r;
+            }
         }
         ++w;
     }
     fclose(f);
-    if (!r)
-        printf("Tested %d words\n", w);
+    printf("Tested %d words, %d with low entropy, %d with high\n", w, Less, More);
     return r;
 }
 
