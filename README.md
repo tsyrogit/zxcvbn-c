@@ -73,7 +73,7 @@ version when there are 4 or less parts, but will differ significantly when there
 parts (which is likely to be a rare occurrence).
 
 
-##References
+## References
 
 The original coffee-script version is available at 
  https://github.com/lowe/zxcvbn
@@ -83,4 +83,10 @@ The dictionary words are taken from the original coffee script version.
 Dictionary trie encoding (used for by the word lookup code) based on idea from the Caroline
 Word Graph from
 http://www.pathcom.com/~vadco/cwg.html
+
+## License
+
+MIT License
+
+* http://www.opensource.org/licenses/mit-license.php
 
