@@ -1491,8 +1491,9 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
             {
                 ++Len;
                 ++Passwd;
+                break;
             }
-            else if ((Next > SetHigh) || (Next < SetLow) || (Passwd[1] != Next))
+            if ((Next > SetHigh) || (Next < SetLow) || (Passwd[1] != Next))
                 break;
             ++Len;
             ++Passwd;
