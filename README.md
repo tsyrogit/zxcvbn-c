@@ -84,3 +84,9 @@ Dictionary trie encoding (used for by the word lookup code) based on idea from t
 Word Graph from
 http://www.pathcom.com/~vadco/cwg.html
 
+## License
+
+MIT License
+
+* http://www.opensource.org/licenses/mit-license.php
+
