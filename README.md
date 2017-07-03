@@ -9,7 +9,7 @@ The original coffee script version is available at
  https://github.com/lowe/zxcvbn
 
 An article on the reasons for zxcvbn is at
-https://tech.dropox.com/2012/04/zxcvbn-realistic-password-strength-estimation
+https://blogs.dropbox.com/tech/2012/04/zxcvbn-realistic-password-strength-estimation/
 
 ##Building
 
