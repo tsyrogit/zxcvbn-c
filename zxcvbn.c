@@ -1,4 +1,4 @@
-/**********************************************************************************
+Ôªø/**********************************************************************************
  * C implementation of the zxcvbn password strength estimation method.
  * Copyright (c) 2015-2017 Tony Evans
  *
@@ -928,7 +928,7 @@ typedef struct
 } SpatialMatchInfo_t;
 
 /* Shift mapping, characters in pairs: first is shifted, second un-shifted. */
-static const uint8_t UK_Shift[] = "!1\"2$4%5&7(9)0*8:;<,>.?/@'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~#Ä4£3¨`";
+static const uint8_t UK_Shift[] = "!1\"2$4%5&7(9)0*8:;<,>.?/@'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~#‚Ç¨4≈Å3¬¨`";
 static const uint8_t US_Shift[] = "!1\"'#3$4%5&7(9)0*8:;<,>.?/@2AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~`";
 
 
