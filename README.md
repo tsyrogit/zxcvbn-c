@@ -49,7 +49,7 @@ omitted when dictionary data is included in the executable.
 Review the test program in `test.c` for an example.
 
 
-## Differences from the original version.
+## Differences from the original version
 
 The entropy calculated will sometimes differ from the original because of
 
