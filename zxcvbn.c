@@ -1148,9 +1148,9 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
     for(CurLen = MaxLen; CurLen >= MIN_SPATIAL_LEN;CurLen = Len - 1)
     {
         Len = 0;
-        memset(&Extra, 0, sizeof Extra);
         for(k = Keyboards, Indx = 0; Indx < (sizeof Keyboards / sizeof Keyboards[0]); ++Indx, ++k)
         {
+            memset(&Extra, 0, sizeof Extra);
             Len = DoSptlMatch(Passwd, CurLen, k, &Extra);
             if (Len > 0)
             {
@@ -1201,7 +1201,6 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
                 p->Length = Len;
                 AddMatchRepeats(Result, p, Passwd, MaxLen);
                 AddResult(Result, p, MaxLen);
-                break;
             }
         }
     }
