@@ -33,6 +33,9 @@
 #include "stdafx.h"
 #endif
 
+/* forward declaration / not part of official API */
+unsigned int _selftest_errors();
+
 const char *UsrDict[] =
 {
     "Onename.Twoname@example.com", "Onename", "Twoname", "example.com", "example",
@@ -207,9 +210,16 @@ int DoChecks(char *file)
 int main(int argc, char **argv)
 {
     int i, Quiet, Checks, White;
+    unsigned int SelftestErrors;
     Quiet = 0;
     Checks = 0;
     White = 0;
+
+    SelftestErrors = _selftest_errors();
+    printf("Selftest returned %d error(s).\n", SelftestErrors );
+    if (SelftestErrors)
+      return 1;
+
     if (!ZxcvbnInit("zxcvbn.dict"))
     {
         printf("Failed to open dictionary file\n");
