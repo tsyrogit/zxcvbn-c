@@ -29,6 +29,13 @@
 #include <math.h>
 #include <float.h>
 
+/* printf */
+#ifdef __cplusplus
+#include <cstdio>
+#else
+#include <stdio.h>
+#endif
+
 #ifdef USE_DICT_FILE
 #if defined(USE_FILE_IO) || !defined(__cplusplus)
 #include <stdio.h>
@@ -932,19 +939,19 @@ static const uint8_t UK_Shift[] = "!1\"2$4%5&7(9)0*8:;<,>.?/@'AaBbCcDdEeFfGgHhIi
 static const uint8_t US_Shift[] = "!1\"'#3$4%5&7(9)0*8:;<,>.?/@2AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~`";
 
 
-/* Neighour tables */
+/* Neighbour tables */
 static const uint8_t UK_Qwerty[48*7] =
 {
 /* key, left, up-left, up-right, right, down-right, down-left */
     '#', '\'',']',   0,   0,   0,   0,    '\'',';', '[', ']', '#',   0, '/',
-    ',', 'm', 'k', 'l', '.',   0,   0,    '-', '0',   0,   0, '-', 'p', 'o',
+    ',', 'm', 'k', 'l', '.',   0,   0,    '-', '0',   0,   0, '=', '[', 'p',
     '.', ',', 'l', ';', '/',   0,   0,    '/', '.', ';', '\'',  0,   0,   0, 
     '0', '9',   0,   0, '-', 'p', 'o',    '1', '`',   0,   0, '2', 'q',   0, 
     '2', '1',   0,   0, '3', 'w', 'q',    '3', '2',   0,   0, '4', 'e', 'w',
     '4', '3',   0,   0, '5', 'r', 'e',    '5', '4',   0,   0, '6', 't', 'r',
     '6', '5',   0,   0, '7', 'y', 't',    '7', '6',   0,   0, '8', 'u', 'y',
     '8', '7',   0,   0, '9', 'i', 'u',    '9', '8',   0,   0, '0', 'o', 'i',
-    ';', 'l', 'o', 'p','\'', '/', '.',    '=', '-',   0,   0,   0, ']', '[',
+    ';', 'l', 'p', '[','\'', '/', '.',    '=', '-',   0,   0,   0, ']', '[',
     '[', 'p', '-', '=', ']', '\'',';',    '\\',  0,   0, 'a', 'z',   0,   0,
     ']', '[', '=',   0,   0, '#','\'',    '`',   0,   0,   0, '1',   0,   0,
     'a',   0, 'q', 'w', 's', 'z','\\',    'b', 'v', 'g', 'h', 'n',   0,   0,
@@ -990,7 +997,7 @@ static const uint8_t US_Qwerty[47*7] =
     'x', 'z', 's', 'd', 'c',   0,   0,    'y', 't', '6', '7', 'u', 'h', 'g',
     'z',   0, 'a', 's', 'x',   0,   0,
 };
-static const uint8_t Dvorak[48*7] =
+static const uint8_t Dvorak[47*7] =
 {
     '\'',  0, '1', '2', ',', 'a',   0,    ',','\'', '2', '3', '.', 'o', 'a',
     '-', 's', '/', '=',   0,   0, 'z',    '.', ',', '3', '4', 'p', 'e', 'o',
@@ -1148,9 +1155,9 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
     for(CurLen = MaxLen; CurLen >= MIN_SPATIAL_LEN;CurLen = Len - 1)
     {
         Len = 0;
-        memset(&Extra, 0, sizeof Extra);
         for(k = Keyboards, Indx = 0; Indx < (sizeof Keyboards / sizeof Keyboards[0]); ++Indx, ++k)
         {
+            memset(&Extra, 0, sizeof Extra);
             Len = DoSptlMatch(Passwd, CurLen, k, &Extra);
             if (Len > 0)
             {
@@ -1201,7 +1208,6 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
                 p->Length = Len;
                 AddMatchRepeats(Result, p, Passwd, MaxLen);
                 AddResult(Result, p, MaxLen);
-                break;
             }
         }
     }

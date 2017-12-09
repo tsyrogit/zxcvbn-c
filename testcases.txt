@@ -59,4 +59,8 @@ pass.word.pass.word.pass.word.          60.41
 passpasswordword         17.28
 quvpzquvpz               24.50
 
+#-- with UK KBD  (US-KBD=17.08)
+jkl;'#                   11.12
+
 magicfavoriteunclepromisedpublicbotherislandjimseriouslycellleadknowingbrokenadvicesomehowpaidblairlosingpushhelpedkillingusuallyearlierbosslaurabeginninglikedinnocentdocruleselizabethsabrinasummerexcoplearnedthirtyrisklettingphillipspeakingofficerridiculoussupportafternoonericwithsobutallwellareheohaboutrightyou're   545.9
+

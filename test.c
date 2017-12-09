@@ -210,6 +210,7 @@ int main(int argc, char **argv)
     Quiet = 0;
     Checks = 0;
     White = 0;
+
     if (!ZxcvbnInit("zxcvbn.dict"))
     {
         printf("Failed to open dictionary file\n");

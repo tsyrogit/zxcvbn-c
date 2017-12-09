@@ -15,7 +15,7 @@ SONAME = libzxcvbn.so.0
 
 WORDS = words-eng_wiki.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
 
-all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib
+all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib test-internals
 
 test-shlib: test.c $(TARGET_LIB)
 	if [ ! -e libzxcvbn.so ]; then ln -s $(TARGET_LIB) libzxcvbn.so; fi
@@ -43,6 +43,10 @@ zxcvbn-file.o: zxcvbn.c dict-crc.h zxcvbn.h
 test-inline: test.c zxcvbn-inline.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) \
 		-o test-inline test.c zxcvbn-inline.o $(LDFLAGS) -lm
+
+test-internals: test-internals.c zxcvbn.c dict-crc.h zxcvbn.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) \
+		-o test-internals test-internals.c $(LDFLAGS) -lm
 
 zxcvbn-inline-pic.o: zxcvbn.c dict-src.h zxcvbn.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -fPIC -c -o $@ $<
@@ -80,7 +84,9 @@ zxcvbn-c++file.o: zxcvbn.c dict-crc.h zxcvbn.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 		-DUSE_DICT_FILE -c -o zxcvbn-c++file.o zxcvbn.cpp
 
-test: test-file test-inline test-c++inline test-c++file test-shlib test-statlib testcases.txt
+test: test-internals test-file test-inline test-c++inline test-c++file test-shlib test-statlib testcases.txt
+	@echo Testing internals...
+	./test-internals
 	@echo Testing C build, dictionary from file
 	./test-file -t testcases.txt
 	@echo Testing C build, dictionary in executable
@@ -97,7 +103,7 @@ test: test-file test-inline test-c++inline test-c++file test-shlib test-statlib 
 
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
-	rm -f test-inline zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
+	rm -f test-inline test-internals zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
 	rm -f dict-*.h zxcvbn.dict zxcvbn.cpp test.cpp
 	rm -f dictgen
 	rm -f ${TARGET_LIB} ${SONAME} libzxcvbn.so test-shlib libzxcvbn.a test-statlib
