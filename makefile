@@ -44,7 +44,7 @@ test-inline: test.c zxcvbn-inline.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) \
 		-o test-inline test.c zxcvbn-inline.o $(LDFLAGS) -lm
 
-test-internals: test-internals.c zxcvbn.c dict-crc.h zxcvbn.h
+test-internals: test-internals.c zxcvbn.c dict-src.h dict-crc.h zxcvbn.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) \
 		-o test-internals test-internals.c $(LDFLAGS) -lm
 
