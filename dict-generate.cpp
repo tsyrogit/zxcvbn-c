@@ -889,7 +889,7 @@ void CreateArrays(NodeSPtr Root, StringIntSet_t & StrSet, StringOfInts & ChildAd
     }
     if (x >= (1 << BITS_CHILD_MAP_INDEX))
     {
-        char Tmp[20];
+        char Tmp[24];
         snprintf(Tmp, sizeof Tmp, "%lu", x);
         throw string("Not enough bits for child map index value of ") + Tmp + " for " +
                 Its->s + " (BITS_CHILD_MAP_INDEX too small)";

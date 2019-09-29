@@ -24,5 +24,6 @@ zxcvbn.dict
 test-*file
 test-*line
 test-*lib
+test-internals
 dictgen
 dict-*.h
