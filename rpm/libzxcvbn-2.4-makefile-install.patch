@@ -1,0 +1,38 @@
+--- zxcvbn-c-2.4.orig/makefile	2018-08-29 13:59:20.000000000 -0700
++++ zxcvbn-c-2.4/makefile	2019-09-28 12:10:36.000000000 -0700
+@@ -13,6 +13,8 @@
+ TARGET_LIB = libzxcvbn.so.0.0.0
+ SONAME = libzxcvbn.so.0
+ 
++LIBDIR := $(or $(LIBDIR),$(/usr/lib))
++
+ WORDS = words-eng_wiki.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
+ 
+ all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib test-internals
+@@ -44,7 +46,7 @@
+ 	$(CC) $(CPPFLAGS) $(CFLAGS) \
+ 		-o test-inline test.c zxcvbn-inline.o $(LDFLAGS) -lm
+ 
+-test-internals: test-internals.c zxcvbn.c dict-crc.h zxcvbn.h
++test-internals: test-internals.c zxcvbn.c dict-src.h dict-crc.h zxcvbn.h
+ 	$(CC) $(CPPFLAGS) $(CFLAGS) \
+ 		-o test-internals test-internals.c $(LDFLAGS) -lm
+ 
+@@ -101,6 +103,17 @@
+ 	./test-c++inline -t testcases.txt
+ 	@echo Finished
+ 
++package: $(TARGET_LIB) libzxcvbn.a dict-crc.h dict-src.h
++
++install: package
++	mkdir -p $(DESTDIR)/usr/{include,share}/zxcvbn $(DESTDIR)/usr/bin $(DESTDIR)$(LIBDIR)
++	install -m 0644 *.h $(DESTDIR)/usr/include/zxcvbn
++	install -m 0644 $(TARGET_LIB) libzxcvbn.a $(DESTDIR)$(LIBDIR)
++	ln -s $(TARGET_LIB) $(DESTDIR)$(LIBDIR)/$(SONAME)
++	ln -s $(SONAME) $(basename $(DESTDIR)$(LIBDIR)/$(SONAME))
++	install -m 0755 dictgen $(DESTDIR)/usr/bin/zxcvbn-dictgen
++	install -m 0644 zxcvbn.dict $(DESTDIR)/usr/share/zxcvbn
++
+ clean:
+ 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
+ 	rm -f test-inline test-internals zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
