@@ -27,3 +27,5 @@ test-*lib
 test-internals
 dictgen
 dict-*.h
+
+build/
