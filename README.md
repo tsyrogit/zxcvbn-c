@@ -71,6 +71,10 @@ end of the password, 1.7 bits for each part in the middle of a password and noth
 for the part at the beginning. This gives similar results compared to the CoffeeScript
 version when there are 4 or less parts, but will differ significantly when there are many
 parts (which is likely to be a rare occurrence).
+* Only the first 100 characters of a password are used in the full entropy estimation calculation.
+This length is given by the ZXCVBN_DETAIL_LEN preprocessor macro and can be altered on the
+compiler command line. The remaining characters are given a low entropy value, roughly equivalent
+to incrementing sequence of the same length.
 
 
 ## References
