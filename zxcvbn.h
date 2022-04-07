@@ -62,6 +62,7 @@ typedef enum
     SPATIAL_MATCH,      /* 8 */
     DATE_MATCH,         /* 9 */
     YEAR_MATCH,         /* 10 */
+    LONG_PWD_MATCH,     /* 11 */
     MULTIPLE_MATCH = 32 /* Added to above to indicate matching part has been repeated */
 } ZxcTypeMatch_t;
 

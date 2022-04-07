@@ -52,6 +52,11 @@
 /* Minimum number of characters in a incrementing/decrementing sequence match */
 #define MIN_SEQUENCE_LEN 3
 
+/* Maximum number of characters to perform full entropy calculation */
+#ifndef ZXCVBN_DETAIL_LEN
+#define ZXCVBN_DETAIL_LEN 100
+#endif
+
 /* Year range for data matching */
 #define MIN_YEAR 1901
 #define MAX_YEAR 2050
@@ -1574,14 +1579,19 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     ZxcMatch_t *Zp;
     Node_t *Np;
     double e;
-    int Len = strlen(Pwd);
+    int FullLen = strlen(Pwd);
+    int Len = FullLen;
     const uint8_t *Passwd = (const uint8_t *)Pwd;
     uint8_t *RevPwd;
     /* Create the paths */
-    Node_t *Nodes = MallocFn(Node_t, Len+1);
-    memset(Nodes, 0, (Len+1) * sizeof *Nodes);
+    Node_t *Nodes = MallocFn(Node_t, Len+2);
+    memset(Nodes, 0, (Len+2) * sizeof *Nodes);
     i = Cardinality(Passwd, Len);
     e = log((double)i);
+
+    /* Limit length used to full entropy estimation to prevent excessive calculation time */
+    if (Len > ZXCVBN_DETAIL_LEN)
+        Len = ZXCVBN_DETAIL_LEN;
 
     /* Do matching for all parts of the password */
     for(i = 0; i < Len; ++i)
@@ -1659,8 +1669,23 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         }
     }
     FreeFn(RevPwd);
+    if (FullLen > Len)
+    {
+        /* Only the first MAX_DETAIL_LEN characters are used for full  entropy estimation, for */
+        /* very long passwords the remainding characters are treated as being a incrementing */
+        /* sequence. This will give a low (and safe) entropy value for them. */
+        Nodes[Len].Dist = DBL_MAX;
+        Zp = AllocMatch();
+        Zp->Type = LONG_PWD_MATCH;
+        Zp->Begin = Len;
+        /* Length is negative as only one extra node to represent many extra characters */
+        Zp->Length = Len - FullLen;
+        Zp->Entrpy = log(2 * (FullLen - Len));
+        AddResult(&(Nodes[i].Paths), Zp, FullLen - Len);
+        ++Len;
+    }
     /* End node has infinite distance/entropy, start node has 0 distance */
-    Nodes[i].Dist = DBL_MAX;
+    Nodes[Len].Dist = DBL_MAX;
     Nodes[0].Dist = 0.0;
 
     /* Reduce the paths using Dijkstra's algorithm */
@@ -1688,8 +1713,12 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
         /* update if the new distance is smaller. */
         for(Zp = Np->Paths; Zp; Zp = Zp->Next)
         {
-            Node_t *Ep = Np + Zp->Length;
+            Node_t *Ep;
             double d = e + Zp->MltEnpy;
+            if (Zp->Length >= 0)
+                Ep = Np + Zp->Length;
+            else
+                Ep = Np + 1;
             if (!Ep->Visit &&  (d < Ep->Dist))
             {
                 /* Update as lower dist, also remember the 'from' node */
@@ -1697,9 +1726,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
                 Ep->From = Zp;
             }
         }
-        /* If we got to the end node stop early */
-        /*if (Nodes[Len].Dist < DBL_MAX/2.0) */
-          /*  break; */
     }
     /* Make e hold entropy result and adjust to log base 2 */
     e = Nodes[Len].Dist / log(2.0);
@@ -1724,6 +1750,8 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
                     /* Adjust the entropy to log to base 2 */
                     Xp->Entrpy /= log(2.0);
                     Xp->MltEnpy /= log(2.0);
+                    if (Xp->Length < 0)
+                        Xp->Length = -Xp->Length;
 
                     /* Put previous part at head of info list */
                     Xp->Next = *Info;
