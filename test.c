@@ -75,6 +75,8 @@ static void CalcPass(const char *Pwd, int Quiet)
                 case SEQUENCE_MATCH:                  printf("  Type: Sequence       ");   break;
                 case SPATIAL_MATCH:                   printf("  Type: Spatial        ");   break;
                 case DATE_MATCH:                      printf("  Type: Date           ");   break;
+                case YEAR_MATCH:                      printf("  Type: Year           ");   break;
+                case LONG_PWD_MATCH:                  printf("  Type: Extra-long     ");   break;
                 case BRUTE_MATCH+MULTIPLE_MATCH:      printf("  Type: Bruteforce(Rep)");   break;
                 case DICTIONARY_MATCH+MULTIPLE_MATCH: printf("  Type: Dictionary(Rep)");   break;
                 case DICT_LEET_MATCH+MULTIPLE_MATCH:  printf("  Type: Dict+Leet(Rep) ");   break;
@@ -84,6 +86,8 @@ static void CalcPass(const char *Pwd, int Quiet)
                 case SEQUENCE_MATCH+MULTIPLE_MATCH:   printf("  Type: Sequence(Rep)  ");   break;
                 case SPATIAL_MATCH+MULTIPLE_MATCH:    printf("  Type: Spatial(Rep)   ");   break;
                 case DATE_MATCH+MULTIPLE_MATCH:       printf("  Type: Date(Rep)      ");   break;
+                case YEAR_MATCH+MULTIPLE_MATCH:       printf("  Type: Year(Rep)      ");   break;
+                case LONG_PWD_MATCH+MULTIPLE_MATCH:   printf("  Type: Extra-long(Rep)");   break;
 
                 default:                printf("  Type: Unknown%d ", p->Type);   break;
             }
@@ -112,7 +116,7 @@ static void CalcPass(const char *Pwd, int Quiet)
 
 int DoChecks(char *file)
 {
-    char Line[500];
+    char Line[5000];
     int y = 0;
     int w = 0;
     int r = 0;
@@ -170,7 +174,7 @@ int DoChecks(char *file)
         }
 
         Ent = atof(t);
-        if ((Ent < 0.0) || (Ent > 1000.0))
+        if ((Ent < 0.0) || (Ent > 10000.0))
         {
             printf("Bad entropy value on line %d\n", y);
             r = 1;
@@ -254,11 +258,11 @@ int main(int argc, char **argv)
         }
         return 0;
     }
-    i = 1+Quiet;
+    i = 1+Quiet+White;
     if (i >= argc)
     {
         /* No test passwords on command line, so get them from stdin */
-        char Line[500];
+        char Line[5000];
         while(fgets(Line, sizeof Line, stdin))
         {
             /* Drop the trailing newline character */
