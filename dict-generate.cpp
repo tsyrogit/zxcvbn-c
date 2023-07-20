@@ -601,17 +601,14 @@ static void ScanTrieForOrder(EntryMap_t & Entries, int & Ord, NodeSPtr Root, con
 static void ReduceTrie(NodeSPtr Root)
 {
     int Height;
-    int cnt=0, del=0;
     Root->CalcCheck();
 
     NodeSPtr pNode = Root;
     for(Height = Root->CalcHeight(); Height >= 0; --Height)
     {
         // Get a list of all nodes at given height
-        int x=0;
         NodeList_t Lst;
         AddToListAtHeight(Lst, Root, Height);
-        cnt += Lst.size();
 
         NodeList_t::iterator Ita, Itb;
         for(Ita = Lst.begin(); Ita != Lst.end(); ++Ita)
@@ -631,7 +628,6 @@ static void ReduceTrie(NodeSPtr Root)
                         // Remove the 2nd node from the scanning list to as it will
                         // get deleted by the sharing (as using std::shared_ptr)
                         Parentb->ChangeChild(*Ita, *Itb);
-                        ++x;++del;
                         Itb = Lst.erase(Itb);
                     }
                     else
@@ -741,7 +737,7 @@ static int CheckReduction(StringIntVect_t & Ranks, NodeSPtr Root, EntryMap_t & E
         {
             char Tmp[20];
             Ranks[b].i = It->second.mRank;
-            sprintf(Tmp, "%d: ", n);
+            snprintf(Tmp, sizeof(Tmp), "%d: ", n);
             Ranks[b].s = string(Tmp) + Text;
         }
         // Try to find a non-existant word
