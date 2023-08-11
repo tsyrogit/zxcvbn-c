@@ -6,7 +6,7 @@ add_executable(dictgen dict-generate.cpp)
 target_compile_features(dictgen PUBLIC cxx_std_11)
 target_compile_options(dictgen PRIVATE "-O3")
 
-add_compile_options("-Wextra" "-Wdeclaration-after-statement")
+add_compile_options("-Wall" "-Wextra")
 
 find_library(LIBM m)
 
