@@ -22,6 +22,7 @@
  *
  **********************************************************************************/
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -387,7 +388,7 @@ typedef map<string, Entry> EntryMap_t;
 typedef list<string> StringList_t;
 typedef list<NodeSPtr> NodeList_t;
 typedef set<StringInt> StringIntSet_t;
-typedef basic_string<int> StringOfInts;
+typedef vector<int> StringOfInts;
 typedef vector<unsigned int> UintVect;
 typedef vector<uint64_t> Uint64Vect;
 typedef vector<StringInt *> StrIntPtrVect_t;
@@ -864,15 +865,14 @@ void CreateArrays(NodeSPtr Root, StringIntSet_t & StrSet, StringOfInts & ChildAd
     for(Itc = Root->ChildBegin(); Itc != Root->ChildEnd(); ++Itc)
     {
         int i = Itc->second->GetAddr();
-        Chld += i;
+        Chld.push_back(i);
     }
     // Find where in pointer array the child pointer string is
-    StringOfInts::size_type x = ChildAddrs.find(Chld);
-    if (x == StringOfInts::npos)
+    StringOfInts::size_type x = search(ChildAddrs.begin(), ChildAddrs.end(), Chld.begin(), Chld.end()) - ChildAddrs.begin();
+    if (x == ChildAddrs.size())
     {
         // Not found, add it
-        x = ChildAddrs.length();
-        ChildAddrs += Chld;
+        ChildAddrs.insert(ChildAddrs.end(), Chld.begin(), Chld.end());
     }
     // Val will contain the final node data
     uint64_t Val = Its->i;
