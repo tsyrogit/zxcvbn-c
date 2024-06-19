@@ -79,8 +79,7 @@ test-c++file: test.c zxcvbn-c++file.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 		-DUSE_DICT_FILE -o test-c++file test.cpp zxcvbn-c++file.o $(LDFLAGS) -lm
 
-zxcvbn-c++file.o: zxcvbn.c dict-crc.h zxcvbn.h 
-	if [ ! -e zxcvbn.cpp ]; then ln -s zxcvbn.c zxcvbn.cpp; fi
+zxcvbn-c++file.o: zxcvbn.c dict-crc.h zxcvbn.h zxcvbn-c++inline.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) \
 		-DUSE_DICT_FILE -c -o zxcvbn-c++file.o zxcvbn.cpp
 
@@ -102,7 +101,7 @@ test: test-internals test-file test-inline test-c++inline test-c++file test-shli
 	@echo Finished
 
 clean:
-	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o 
+	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o
 	rm -f test-inline test-internals zxcvbn-inline.o zxcvbn-inline-pic.o test-c++inline zxcvbn-c++inline.o
 	rm -f dict-*.h zxcvbn.dict zxcvbn.cpp test.cpp
 	rm -f dictgen
