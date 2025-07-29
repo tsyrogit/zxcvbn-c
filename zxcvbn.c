@@ -1228,7 +1228,7 @@ static void SpatialMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, 
 
 /* The possible date formats ordered by length (d for day, m for month, */
 /*  y for year, ? for separator) */
-static const char *Formats[] =
+static const char * const Formats[] =
 {
     "yyyy",
     "d?m?yy",

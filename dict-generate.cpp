@@ -1246,7 +1246,7 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
     unsigned int Len = ((NodeData.size() + 7) / 8);
     OutputSize += Len;
     x = 999;
-    *Out << "static unsigned char WordEndBits[" << Len << "] =\n{";
+    *Out << "static const unsigned char WordEndBits[" << Len << "] =\n{";
     Index = 0;
     unsigned int v = 0;
     unsigned int y = 0;
