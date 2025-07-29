@@ -13,6 +13,12 @@ CPPFLAGS += -I.
 TARGET_LIB = libzxcvbn.so.0.0.0
 SONAME = libzxcvbn.so.0
 
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+INCLUDEDIR ?= $(PREFIX)/include
+LIBDIR ?= $(PREFIX)/lib64
+DATADIR ?= $(PREFIX)/share
+
 WORDS = words-eng_wiki.txt words-female.txt words-male.txt words-passwd.txt words-surname.txt words-tv_film.txt
 
 all: test-file test-inline test-c++inline test-c++file test-shlib test-statlib test-internals
@@ -99,6 +105,18 @@ test: test-internals test-file test-inline test-c++inline test-c++file test-shli
 	@echo Testing C++ build, dictionary in executable
 	./test-c++inline -t testcases.txt
 	@echo Finished
+
+install: $(TARGET_LIB) libzxcvbn.a dict-crc.h dict-src.h
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	install -m 0644 zxcvbn.h $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	install -m 0644 $(TARGET_LIB) libzxcvbn.a $(DESTDIR)$(LIBDIR)
+	ln -s $(TARGET_LIB) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -s $(SONAME) $(basename $(DESTDIR)$(LIBDIR)/$(SONAME))
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -m 0755 dictgen $(DESTDIR)$(BINDIR)/zxcvbn-dictgen
+	mkdir -p $(DESTDIR)$(DATADIR)/zxcvbn
+	install -m 0644 zxcvbn.dict $(DESTDIR)$(DATADIR)/zxcvbn
 
 clean:
 	rm -f test-file zxcvbn-file.o test-c++file zxcvbn-c++file.o
