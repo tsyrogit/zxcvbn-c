@@ -36,7 +36,7 @@ test-statlib: test.c libzxcvbn.a
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lm
 
 libzxcvbn.a: zxcvbn-inline.o
-	$(AR) cvq $@ $^
+	$(AR) cvr $@ $^
 
 test-file: test.c zxcvbn-file.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) \
