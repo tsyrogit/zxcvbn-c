@@ -39,6 +39,8 @@ const char *UsrDict[] =
     0
 };
 
+int DoChecks(char *file);
+
 static void CalcPass(const char *Pwd, int Quiet)
 {
     double e;
