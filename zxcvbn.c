@@ -1409,9 +1409,9 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
             if (strncmp((const char *)Passwd, (const char *)Rpt, Len) == 0)
             {
                 /* Found a repeat */
-                int c = Cardinality(Passwd, Len);
+                int c1 = Cardinality(Passwd, Len);
                 ZxcMatch_t *p = AllocMatch();
-                p->Entrpy = log((double)c) * Len + log(RepeatCount);
+                p->Entrpy = log((double)c1) * Len + log(RepeatCount);
                 p->Type = (ZxcTypeMatch_t)(BRUTE_MATCH + MULTIPLE_MATCH);
                 p->Length = Len * RepeatCount;
                 p->Begin = Start;
@@ -1652,7 +1652,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     for(i = 0; i < Len; ++i)
     {
         int MaxLen = Len - i;
-        int j;
         if (!RevPwd[i])
             continue;
         for(j = i+1; j <= Len; ++j)
@@ -1691,7 +1690,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     /* Reduce the paths using Dijkstra's algorithm */
     for(i = 0; i < Len; ++i)
     {
-        int j;
         double MinDist = DBL_MAX;
         int MinIdx = 0;
         /* Find the unvisited node with minimum distance or entropy */
