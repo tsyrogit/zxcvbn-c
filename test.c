@@ -114,7 +114,7 @@ static void CalcPass(const char *Pwd, int Quiet)
     }
 }
 
-int DoChecks(char *file)
+static int DoChecks(char *file)
 {
     char Line[5000];
     int y = 0;

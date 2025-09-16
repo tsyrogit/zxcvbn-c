@@ -94,7 +94,7 @@ int ZxcvbnInit(const char *);
 /**********************************************************************************
  * Free the dictionnary data after use. Called once at program shutdown.
  */
-void ZxcvbnUnInit();
+void ZxcvbnUnInit(void);
 
 #else
 
@@ -115,7 +115,7 @@ void ZxcvbnUnInit();
  *  Info        The address of a pointer variable to receive information on the parts
  *               of the password. This parameter can be null if no information is wanted.
  *               The data should be freed by calling ZxcvbnFreeInfo().
- * 
+ *
  * Returns the entropy of the password (in bits).
  */
 double ZxcvbnMatch(const char *Passwd, const char *UserDict[], ZxcMatch_t **Info);
