@@ -1069,18 +1069,18 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
     unsigned int CharSetLen = 0;
     for(Index = 0; Index < SetPtrs.size(); ++Index)
     {
-        unsigned int i, j;
-        string::size_type z, y;
+        unsigned int j;
+        string::size_type z1, y1;
         StringInt *p;
         memset(Buf, 0, sizeof Buf);
         p = SetPtrs[Index];
         Str = p->s;
-        for(z = 0; z < Str.length(); ++z)
+        for(z1 = 0; z1 < Str.length(); ++z1)
         {
-            y = CharSet.find(Str[z]);
-            if (y != string::npos)
+            y1 = CharSet.find(Str[z1]);
+            if (y1 != string::npos)
             {
-                Buf[y/8] |= 1 << (y & 7);
+                Buf[y1 / 8] |= 1 << (y1 & 7);
             }
         }
         // Find max bits set which indicates max number chars ued at a node
@@ -1139,7 +1139,7 @@ static int OutputBinary(ostream *Out, const string & ChkFile, const string & Cha
         f << "#define WORD_FILE_SIZE " << OutputSize << endl;
         f << "#define ROOT_NODE_LOC 0\n"
              "#define BITS_CHILD_PATT_INDEX " << BITS_CHILD_PATT_INDEX << "\n"
-             "#define BITS_CHILD_MAP_INDEX  " << BITS_CHILD_MAP_INDEX << "\n" 
+             "#define BITS_CHILD_MAP_INDEX  " << BITS_CHILD_MAP_INDEX << "\n"
              "#define SHIFT_CHILD_MAP_INDEX BITS_CHILD_PATT_INDEX\n"
              "#define SHIFT_WORD_ENDING_BIT (SHIFT_CHILD_MAP_INDEX + BITS_CHILD_MAP_INDEX)\n"
              "#define CHARSET_SIZE " << (CharSetLen + 1) << endl;
@@ -1183,7 +1183,7 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
     // Output array of node data
     *Out << "#define ROOT_NODE_LOC 0\n"
             "#define BITS_CHILD_PATT_INDEX " << BITS_CHILD_PATT_INDEX << "\n"
-            "#define BITS_CHILD_MAP_INDEX  " << BITS_CHILD_MAP_INDEX << "\n" 
+            "#define BITS_CHILD_MAP_INDEX  " << BITS_CHILD_MAP_INDEX << "\n"
             "#define SHIFT_CHILD_MAP_INDEX BITS_CHILD_PATT_INDEX\n"
             "#define SHIFT_WORD_ENDING_BIT (SHIFT_CHILD_MAP_INDEX + BITS_CHILD_MAP_INDEX)\n"
             "static const unsigned int DictNodes[" << NodeData.size() << "] =\n{";
@@ -1248,35 +1248,37 @@ int OutputCode(ostream *Out, bool Cmnts, const string & CharSet, StringIntSet_t 
     x = 999;
     *Out << "static const unsigned char WordEndBits[" << Len << "] =\n{";
     Index = 0;
-    unsigned int v = 0;
-    unsigned int y = 0;
-    unsigned int z = 0;
-    while(z < Len)
     {
-        if (Index < NodeData.size())
+        unsigned int v = 0;
+        unsigned int y = 0;
+        unsigned int z = 0;
+        while(z < Len)
         {
-            if (NodeData[Index] & (uint64_t(1) << SHIFT_WORD_ENDING_BIT))
-                v |= 1 << y;
-        }
-        if (++y >= 8)
-        {
-            x += 4;
-            if (x > LINE_OUT_LEN)
+            if (Index < NodeData.size())
             {
-                *Out << "\n    ";
-                x = 0;
+                if (NodeData[Index] & (uint64_t(1) << SHIFT_WORD_ENDING_BIT))
+                    v |= 1 << y;
             }
-            *Out << v;
-            if (++z < Len)
+            if (++y >= 8)
             {
-                *Out << ',';
-                if (v < 100) *Out << ' ';
-                if (v < 10) *Out << ' ';
+                x += 4;
+                if (x > LINE_OUT_LEN)
+                {
+                    *Out << "\n    ";
+                    x = 0;
+                }
+                *Out << v;
+                if (++z < Len)
+                {
+                    *Out << ',';
+                    if (v < 100) *Out << ' ';
+                    if (v < 10) *Out << ' ';
+                }
+                y = 0;
+                v = 0;
             }
-            y = 0;
-            v = 0;
+            ++Index;
         }
-        ++Index;
     }
     *Out << "\n};\n";
     // Output array of node pointers

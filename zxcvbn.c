@@ -1,4 +1,4 @@
-/**********************************************************************************
+ï»¿/**********************************************************************************
  * C implementation of the zxcvbn password strength estimation method.
  * Copyright (c) 2015-2017 Tony Evans
  *
@@ -447,7 +447,7 @@ int ZxcvbnInit(const char *Filename)
 /**********************************************************************************
  * Free the data allocated by ZxcvbnInit().
  */
-void ZxcvbnUnInit()
+void ZxcvbnUnInit(void)
 {
     if (DictNodes)
         FreeFn(DictNodes);
@@ -940,7 +940,7 @@ typedef struct
 } SpatialMatchInfo_t;
 
 /* Shift mapping, characters in pairs: first is shifted, second un-shifted. Ordered for increasing shifted character code.*/
-/* Note: on a UK keyboard  \243 is the £ (Pound stirling),  \244 is the ¤ (Euro),  \254 is the ¬ (Not sign)  */
+/* Note: on a UK keyboard  \243 is the Â£ (Pound stirling),  \244 is the Â¤ (Euro),  \254 is the Â¬ (Not sign)  */
 static const uint8_t UK_Shift[] = "!1\"2$4%5&7(9)0*8:;<,>.?/@'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~#\2433\2444\254`";
 static const uint8_t US_Shift[] = "!1\"'#3$4%5&7(9)0*8:;<,>.?/@2AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz^6_-{[|\\}]~`";
 
@@ -951,8 +951,8 @@ static const uint8_t UK_Qwerty[48*7] =
 /* key, left, up-left, up-right, right, down-right, down-left */
     '#', '\'',']',   0,   0,   0,   0,    '\'',';', '[', ']', '#',   0, '/',
     ',', 'm', 'k', 'l', '.',   0,   0,    '-', '0',   0,   0, '=', '[', 'p',
-    '.', ',', 'l', ';', '/',   0,   0,    '/', '.', ';', '\'',  0,   0,   0, 
-    '0', '9',   0,   0, '-', 'p', 'o',    '1', '`',   0,   0, '2', 'q',   0, 
+    '.', ',', 'l', ';', '/',   0,   0,    '/', '.', ';', '\'',  0,   0,   0,
+    '0', '9',   0,   0, '-', 'p', 'o',    '1', '`',   0,   0, '2', 'q',   0,
     '2', '1',   0,   0, '3', 'w', 'q',    '3', '2',   0,   0, '4', 'e', 'w',
     '4', '3',   0,   0, '5', 'r', 'e',    '5', '4',   0,   0, '6', 't', 'r',
     '6', '5',   0,   0, '7', 'y', 't',    '7', '6',   0,   0, '8', 'u', 'y',
@@ -1409,9 +1409,9 @@ static void RepeatMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start, i
             if (strncmp((const char *)Passwd, (const char *)Rpt, Len) == 0)
             {
                 /* Found a repeat */
-                int c = Cardinality(Passwd, Len);
+                int c1 = Cardinality(Passwd, Len);
                 ZxcMatch_t *p = AllocMatch();
-                p->Entrpy = log((double)c) * Len + log(RepeatCount);
+                p->Entrpy = log((double)c1) * Len + log(RepeatCount);
                 p->Type = (ZxcTypeMatch_t)(BRUTE_MATCH + MULTIPLE_MATCH);
                 p->Length = Len * RepeatCount;
                 p->Begin = Start;
@@ -1486,7 +1486,7 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
             Next = Passwd[0] + Dir;
             if (IsDigits && (Dir > 0) && (Next == ('9' + 1)) && (Passwd[1] == '0'))
             {
-                /* Incrementing digits, consider '0' to be same as a 'ten' character */ 
+                /* Incrementing digits, consider '0' to be same as a 'ten' character */
                 ++Len;
                 ++Passwd;
                 break;
@@ -1558,7 +1558,7 @@ static void SequenceMatch(ZxcMatch_t **Result, const uint8_t *Passwd, int Start,
  *
  * Dijkstra's algorithm finds the combination of these part matches (or paths)
  * which gives the lowest entropy (or smallest distance) from begining to end
- * of the password. 
+ * of the password.
  */
 
 /* Struct to hold the data of a node (imaginary point between password characters) */
@@ -1652,7 +1652,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     for(i = 0; i < Len; ++i)
     {
         int MaxLen = Len - i;
-        int j;
         if (!RevPwd[i])
             continue;
         for(j = i+1; j <= Len; ++j)
@@ -1691,7 +1690,6 @@ double ZxcvbnMatch(const char *Pwd, const char *UserDict[], ZxcMatch_t **Info)
     /* Reduce the paths using Dijkstra's algorithm */
     for(i = 0; i < Len; ++i)
     {
-        int j;
         double MinDist = DBL_MAX;
         int MinIdx = 0;
         /* Find the unvisited node with minimum distance or entropy */
