@@ -567,6 +567,14 @@ static void AddToListAtHeight(NodeList_t & Lst, NodeSPtr Node, int Hi)
 }
 
 /**********************************************************************************
+ * Order nodes by checksum, so that identical nodes sort together.
+ */
+static bool LessCheck(const NodeSPtr & a, const NodeSPtr & b)
+{
+    return a->CalcCheck() < b->CalcCheck();
+}
+
+/**********************************************************************************
  * Scan the trie and update the original word list with the alphabetical order
  * (or 'index location') of the words
  */
@@ -611,6 +619,8 @@ static void ReduceTrie(NodeSPtr Root)
         // Get a list of all nodes at given height
         NodeList_t Lst;
         AddToListAtHeight(Lst, Root, Height);
+        // Sort by checksum so identical nodes are adjacent
+        Lst.sort(LessCheck);
 
         NodeList_t::iterator Ita, Itb;
         for(Ita = Lst.begin(); Ita != Lst.end(); ++Ita)
@@ -640,7 +650,8 @@ static void ReduceTrie(NodeSPtr Root)
                 }
                 else
                 {
-                    ++Itb;
+                    // Sorted, so no identical nodes remain
+                    break;
                 }
             }
         }
